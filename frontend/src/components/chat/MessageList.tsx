@@ -8,6 +8,7 @@ type MessageListProps = {
   chatId: string
   savedScrollTop: number
   onScrollPositionChange: (scrollTop: number) => void
+  onReply: (message: ChatMessage) => void
 }
 
 function MessageList({
@@ -15,6 +16,7 @@ function MessageList({
   chatId,
   savedScrollTop,
   onScrollPositionChange,
+  onReply,
 }: MessageListProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const isFirstRender = useRef(true)
@@ -31,7 +33,7 @@ function MessageList({
     return () => cancelAnimationFrame(frameId)
   }, [chatId])
 
-  // Scroll down only when a new message is added.
+  // Scroll down when the message list changes.
   useLayoutEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false
@@ -46,6 +48,20 @@ function MessageList({
       behavior: 'smooth',
     })
   }, [messages])
+
+  function handleJumpToMessage(messageId: string) {
+    const container = containerRef.current
+    if (!container) return
+
+    const originalMessage = container.querySelector(
+      `[data-message-id="${messageId}"]`,
+    )
+
+    originalMessage?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+    })
+  }
 
   return (
     <div
@@ -62,12 +78,23 @@ function MessageList({
           </span>
         </div>
 
-        {messages.map((message) => (
-          <MessageBubble
-            key={message.id}
-            message={message}
-          />
-        ))}
+        {messages.map((message) => {
+          const replyToMessage = message.replyTo
+            ? messages.find(
+                (item) => item.id === message.replyTo,
+              )
+            : undefined
+
+          return (
+            <MessageBubble
+              key={message.id}
+              message={message}
+              replyToMessage={replyToMessage}
+              onReply={onReply}
+              onJumpToMessage={handleJumpToMessage}
+            />
+          )
+        })}
 
         {messages.length === 0 && (
           <p className="text-center text-sm text-secondary py-10">

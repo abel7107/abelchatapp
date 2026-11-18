@@ -1,5 +1,5 @@
 
-import { useRef,useState } from 'react'
+import { useRef, useState } from 'react'
 
 import NavigationRail from './components/layout/NavigationRail'
 import ConversationSidebar from './components/layout/ConversationSidebar'
@@ -53,18 +53,33 @@ const chatDetails: Record<
 }
 
 function App() {
+  // Stores the message currently selected for replying.
+  const [replyingTo, setReplyingTo] =
+    useState<ChatMessage | null>(null)
+
   const [selectedChatId, setSelectedChatId] =
     useState<string | null>(null)
 
-    const [lastActivityByChat, setLastActivityByChat] =
-  useState<Record<string, number>>({})
+  const [lastActivityByChat, setLastActivityByChat] =
+    useState<Record<string, number>>({})
 
   const [messagesByChat, setMessagesByChat] =
     useState<Record<string, ChatMessage[]>>(sampleMessages)
 
   const [drafts, setDrafts] = useState<Record<string, string>>({})
-    
+
+  // Stores how many unread messages each conversation has.
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({
+    '1': 2,
+    '2': 5,
+    '3': 0,
+    '4': 0,
+    '5': 1,
+  })
+
+  // Stores each conversation's scroll position.
   const scrollPositions = useRef<Record<string, number>>({})
+
   const selectedChat = selectedChatId
     ? chatDetails[selectedChatId]
     : null
@@ -73,6 +88,21 @@ function App() {
     ? messagesByChat[selectedChatId] ?? []
     : []
 
+  // Called when the user opens a conversation.
+  function handleSelectChat(chatId: string) {
+    setSelectedChatId(chatId)
+
+    // Clear any reply selected in the previous conversation.
+    setReplyingTo(null)
+
+    // Opening a conversation marks its messages as read.
+    setUnreadCounts((currentCounts) => ({
+      ...currentCounts,
+      [chatId]: 0,
+    }))
+  }
+
+  // Saves the draft separately for each conversation.
   function handleDraftChange(value: string) {
     if (!selectedChatId) return
 
@@ -82,45 +112,124 @@ function App() {
     }))
   }
 
-              function handleSendMessage(text: string) {
-              if (!selectedChatId) return
+  // Sends a new message.
+  function handleSendMessage(text: string) {
+    if (!selectedChatId) return
 
-              const now = Date.now()
+    const chatId = selectedChatId
+    const now = Date.now()
+    const messageId = crypto.randomUUID()
 
-              const newMessage: ChatMessage = {
-                id: crypto.randomUUID(),
-                text,
-                time: new Date(now).toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                }),
-                sender: 'me',
-                status: 'sent',
-              }
+    const newMessage: ChatMessage = {
+      id: messageId,
+      text,
+      time: new Date(now).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+      sender: 'me',
+      status: 'sent',
 
-              setMessagesByChat((currentMessages) => ({
-                ...currentMessages,
-                [selectedChatId]: [
-                  ...(currentMessages[selectedChatId] ?? []),
-                  newMessage,
-                ],
-              }))
+      // Connects this message to the message being replied to.
+      replyTo: replyingTo?.id,
+    }
 
-              setLastActivityByChat((currentActivity) => ({
-                ...currentActivity,
-                [selectedChatId]: now,
-              }))
-            }
+    // 1. Add the new message with "sent" status.
+    setMessagesByChat((currentMessages) => ({
+      ...currentMessages,
+      [chatId]: [
+        ...(currentMessages[chatId] ?? []),
+        newMessage,
+      ],
+    }))
+
+    // 2. Update the conversation's latest activity.
+    setLastActivityByChat((currentActivity) => ({
+      ...currentActivity,
+      [chatId]: now,
+    }))
+
+    // 3. Simulate delivery after 1 second.
+    setTimeout(() => {
+      setMessagesByChat((currentMessages) => ({
+        ...currentMessages,
+        [chatId]: (currentMessages[chatId] ?? []).map((message) =>
+          message.id === messageId
+            ? { ...message, status: 'delivered' }
+            : message
+        ),
+      }))
+    }, 1000)
+
+    // 4. Simulate the recipient reading after 5 seconds.
+    setTimeout(() => {
+      setMessagesByChat((currentMessages) => ({
+        ...currentMessages,
+        [chatId]: (currentMessages[chatId] ?? []).map((message) =>
+          message.id === messageId
+            ? { ...message, status: 'read' }
+            : message
+        ),
+      }))
+    }, 5000)
+
+    // Clear the reply selection after sending.
+    setReplyingTo(null)
+  }
+
+  // Temporary testing function: simulates a message from another user.
+  function handleSimulateIncomingMessage() {
+    const targetChatId =
+      ['1', '2', '3', '4', '5'].find(
+        (chatId) => chatId !== selectedChatId,
+      ) ?? '1'
+
+    const now = Date.now()
+
+    const incomingMessage: ChatMessage = {
+      id: crypto.randomUUID(),
+      text: 'Hey! This is a simulated incoming message.',
+      time: new Date(now).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+      sender: 'other',
+    }
+
+    setMessagesByChat((currentMessages) => ({
+      ...currentMessages,
+      [targetChatId]: [
+        ...(currentMessages[targetChatId] ?? []),
+        incomingMessage,
+      ],
+    }))
+
+    setLastActivityByChat((currentActivity) => ({
+      ...currentActivity,
+      [targetChatId]: now,
+    }))
+
+    // A message in another conversation increases its unread count.
+    if (targetChatId !== selectedChatId) {
+      setUnreadCounts((currentCounts) => ({
+        ...currentCounts,
+        [targetChatId]: (currentCounts[targetChatId] ?? 0) + 1,
+      }))
+    }
+  }
+
   return (
     <div className="h-screen overflow-hidden bg-app-bg text-primary flex">
       <NavigationRail />
 
       <ConversationSidebar
-      selectedChatId={selectedChatId}
-      onSelectChat={setSelectedChatId}
-      messagesByChat={messagesByChat}
-      lastActivityByChat={lastActivityByChat}
-    />
+        selectedChatId={selectedChatId}
+        onSelectChat={handleSelectChat}
+        messagesByChat={messagesByChat}
+        lastActivityByChat={lastActivityByChat}
+        unreadCounts={unreadCounts}
+        onSimulateIncomingMessage={handleSimulateIncomingMessage}
+      />
 
       <main className="flex-1 min-w-0 flex flex-col bg-app-bg">
         {selectedChat && selectedChatId ? (
@@ -132,19 +241,22 @@ function App() {
               isGroup={selectedChat.isGroup}
             />
 
-           <MessageList
+            <MessageList
               messages={selectedMessages}
               chatId={selectedChatId}
               savedScrollTop={scrollPositions.current[selectedChatId] ?? 0}
               onScrollPositionChange={(scrollTop) => {
                 scrollPositions.current[selectedChatId] = scrollTop
               }}
+              onReply={setReplyingTo}
             />
 
             <MessageComposer
               value={drafts[selectedChatId] ?? ''}
               onChange={handleDraftChange}
               onSendMessage={handleSendMessage}
+              replyTo={replyingTo}
+              onCancelReply={() => setReplyingTo(null)}
             />
           </>
         ) : (

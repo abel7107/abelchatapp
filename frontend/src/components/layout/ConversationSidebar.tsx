@@ -5,6 +5,7 @@ import {
   Plus,
   Filter,
   CheckCheck,
+  MessageCircle,
 } from 'lucide-react'
 
 import type { ChatMessage } from '../chat/types'
@@ -26,6 +27,8 @@ type ConversationSidebarProps = {
   onSelectChat: (chatId: string) => void
   messagesByChat: Record<string, ChatMessage[]>
   lastActivityByChat: Record<string, number>
+  unreadCounts: Record<string, number>
+  onSimulateIncomingMessage: () => void
 }
 
 const conversations: ChatPreview[] = [
@@ -93,6 +96,8 @@ function ConversationSidebar({
   onSelectChat,
   messagesByChat,
   lastActivityByChat,
+  unreadCounts,
+  onSimulateIncomingMessage,
 }: ConversationSidebarProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeFilter, setActiveFilter] = useState<FilterType>('all')
@@ -102,14 +107,15 @@ function ConversationSidebar({
       const chatMessages = messagesByChat[chat.id] ?? []
       const latestMessage = chatMessages[chatMessages.length - 1]
 
-      if (!latestMessage) return chat
-
       return {
         ...chat,
-        message: latestMessage.sender === 'me'
-          ? `You: ${latestMessage.text}`
-          : latestMessage.text,
-        time: latestMessage.time,
+        message: latestMessage
+          ? latestMessage.sender === 'me'
+            ? `You: ${latestMessage.text}`
+            : latestMessage.text
+          : chat.message,
+        time: latestMessage?.time ?? chat.time,
+        unreadCount: unreadCounts[chat.id] ?? 0,
       }
     })
 
@@ -138,6 +144,7 @@ function ConversationSidebar({
     activeFilter,
     messagesByChat,
     lastActivityByChat,
+     unreadCounts,
   ])
 
   return (
@@ -155,6 +162,14 @@ function ConversationSidebar({
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+                type="button"
+                title="Simulate incoming message (testing)"
+                onClick={onSimulateIncomingMessage}
+                className="w-10 h-10 rounded-xl flex items-center justify-center text-secondary hover:bg-surface hover:text-accent transition"
+                >
+                <MessageCircle size={19} />
+                </button>
             <button
               title="Filter conversations"
               className="w-10 h-10 rounded-xl flex items-center justify-center text-secondary hover:bg-surface hover:text-primary transition"
@@ -283,5 +298,6 @@ function ConversationSidebar({
     </aside>
   )
 }
+  
 
 export default ConversationSidebar

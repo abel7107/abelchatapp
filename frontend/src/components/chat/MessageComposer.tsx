@@ -7,22 +7,26 @@ import {
   Paperclip,
   Smile,
   Send,
+  X,
 } from 'lucide-react'
+import type { ChatMessage } from './types'
 
 type MessageComposerProps = {
   value: string
   onChange: (value: string) => void
   onSendMessage: (text: string) => void
+  replyTo: ChatMessage | null
+  onCancelReply: () => void
 }
 
 function MessageComposer({
   value,
   onChange,
   onSendMessage,
+  replyTo,
+  onCancelReply,
 }: MessageComposerProps) {
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-
+  function handleSend() {
     const trimmedMessage = value.trim()
 
     if (!trimmedMessage) return
@@ -31,18 +35,17 @@ function MessageComposer({
     onChange('')
   }
 
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    handleSend()
+  }
+
   function handleKeyDown(
     event: KeyboardEvent<HTMLTextAreaElement>,
   ) {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault()
-
-      const trimmedMessage = value.trim()
-
-      if (!trimmedMessage) return
-
-      onSendMessage(trimmedMessage)
-      onChange('')
+      handleSend()
     }
   }
 
@@ -52,6 +55,29 @@ function MessageComposer({
       className="px-4 sm:px-8 py-4 bg-white border-t border-border shrink-0"
     >
       <div className="max-w-4xl mx-auto">
+        {replyTo && (
+          <div className="flex items-center justify-between gap-3 mb-3 p-3 bg-accent-soft rounded-xl border-l-4 border-accent">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-accent">
+                Replying to {replyTo.sender === 'me' ? 'yourself' : 'message'}
+              </p>
+
+              <p className="text-sm text-secondary truncate mt-1">
+                {replyTo.text}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={onCancelReply}
+              title="Cancel reply"
+              className="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center text-secondary hover:bg-white hover:text-danger transition"
+            >
+              <X size={17} />
+            </button>
+          </div>
+        )}
+
         <div className="flex items-end gap-2 bg-surface rounded-2xl border border-border p-2">
           <button
             type="button"
