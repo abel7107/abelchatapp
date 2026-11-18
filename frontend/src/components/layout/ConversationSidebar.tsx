@@ -7,6 +7,8 @@ import {
   CheckCheck,
 } from 'lucide-react'
 
+import type { ChatMessage } from '../chat/types'
+
 type ChatPreview = {
   id: string
   name: string
@@ -22,6 +24,8 @@ type ChatPreview = {
 type ConversationSidebarProps = {
   selectedChatId: string | null
   onSelectChat: (chatId: string) => void
+  messagesByChat: Record<string, ChatMessage[]>
+  lastActivityByChat: Record<string, number>
 }
 
 const conversations: ChatPreview[] = [
@@ -87,12 +91,37 @@ type FilterType = 'all' | 'unread' | 'groups'
 function ConversationSidebar({
   selectedChatId,
   onSelectChat,
+  messagesByChat,
+  lastActivityByChat,
 }: ConversationSidebarProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeFilter, setActiveFilter] = useState<FilterType>('all')
 
   const filteredConversations = useMemo(() => {
-    return conversations.filter((chat) => {
+    const updatedConversations = conversations.map((chat) => {
+      const chatMessages = messagesByChat[chat.id] ?? []
+      const latestMessage = chatMessages[chatMessages.length - 1]
+
+      if (!latestMessage) return chat
+
+      return {
+        ...chat,
+        message: latestMessage.sender === 'me'
+          ? `You: ${latestMessage.text}`
+          : latestMessage.text,
+        time: latestMessage.time,
+      }
+    })
+
+    // Move conversations with recent activity to the top.
+    updatedConversations.sort((a, b) => {
+      return (
+        (lastActivityByChat[b.id] ?? 0) -
+        (lastActivityByChat[a.id] ?? 0)
+      )
+    })
+
+    return updatedConversations.filter((chat) => {
       const matchesSearch =
         chat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         chat.message.toLowerCase().includes(searchQuery.toLowerCase())
@@ -104,7 +133,12 @@ function ConversationSidebar({
 
       return matchesSearch && matchesFilter
     })
-  }, [searchQuery, activeFilter])
+  }, [
+    searchQuery,
+    activeFilter,
+    messagesByChat,
+    lastActivityByChat,
+  ])
 
   return (
     <aside className="w-[360px] h-screen bg-sidebar border-r border-border flex flex-col shrink-0">

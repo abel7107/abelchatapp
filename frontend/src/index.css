@@ -2,58 +2,42 @@
 @import "tailwindcss";
 
 /* =================================
-   ABELCHAT DESIGN SYSTEM
-   Version 1.0
+   ABELCHAT DESIGN TOKENS
 ================================= */
 
-/* Dark theme — default */
 :root {
-  color-scheme: dark;
-
-  --app-bg: #080f1d;
-  --sidebar-bg: #111d30;
-  --surface: #17243a;
-  --surface-hover: #202f47;
-
-  --border: #24334a;
-
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-
-  --accent: #10b981;
-  --accent-hover: #059669;
-  --accent-soft: rgba(16, 185, 129, 0.12);
-
-  --secondary-accent: #22d3ee;
-}
-
-/* Light theme */
-[data-theme="light"] {
   color-scheme: light;
 
-  --app-bg: #f5f8fc;
-  --sidebar-bg: #ffffff;
-  --surface: #eef3f8;
-  --surface-hover: #e5edf5;
+  --app-bg: #F7F6FC;
+  --sidebar-bg: #FFFFFF;
+  --surface: #F3F1F8;
+  --surface-hover: #EDEAF4;
 
-  --border: #dce5ee;
+  --border: #E8E5F0;
 
-  --text-primary: #17243a;
-  --text-secondary: #64748b;
+  --text-primary: #211B2D;
+  --text-secondary: #756F83;
 
-  --accent: #059669;
-  --accent-hover: #047857;
-  --accent-soft: rgba(5, 150, 105, 0.10);
+  --accent: #7C3AED;
+  --accent-hover: #6D28D9;
+  --accent-soft: #EDE9FE;
 
-  --secondary-accent: #0891b2;
+  --success: #16A34A;
+  --danger: #DC2626;
+
+  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
 }
 
-/* Tailwind utility mappings */
+/* =================================
+   TAILWIND CSS THEME MAPPING
+================================= */
+
 @theme inline {
   --color-app-bg: var(--app-bg);
   --color-sidebar: var(--sidebar-bg);
   --color-surface: var(--surface);
   --color-surface-hover: var(--surface-hover);
+
   --color-border: var(--border);
 
   --color-primary: var(--text-primary);
@@ -62,12 +46,17 @@
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
   --color-accent-soft: var(--accent-soft);
-  --color-secondary-accent: var(--secondary-accent);
 
-  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+
+  --font-sans: var(--font-sans);
 }
 
-/* Global browser defaults */
+/* =================================
+   GLOBAL BASE STYLES
+================================= */
+
 @layer base {
   * {
     box-sizing: border-box;
@@ -76,14 +65,15 @@
   html,
   body,
   #root {
+    width: 100%;
     min-height: 100%;
     margin: 0;
   }
 
   body {
-    background: var(--app-bg);
+    background-color: var(--app-bg);
     color: var(--text-primary);
-    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
 
@@ -95,5 +85,15 @@
 
   button {
     cursor: pointer;
+  }
+
+  input,
+  textarea {
+    color: var(--text-primary);
+  }
+
+  ::selection {
+    background: var(--accent-soft);
+    color: var(--accent);
   }
 }
