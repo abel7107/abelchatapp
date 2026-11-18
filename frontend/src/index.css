@@ -1,0 +1,99 @@
+
+@import "tailwindcss";
+
+/* =================================
+   ABELCHAT DESIGN SYSTEM
+   Version 1.0
+================================= */
+
+/* Dark theme — default */
+:root {
+  color-scheme: dark;
+
+  --app-bg: #080f1d;
+  --sidebar-bg: #111d30;
+  --surface: #17243a;
+  --surface-hover: #202f47;
+
+  --border: #24334a;
+
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+
+  --accent: #10b981;
+  --accent-hover: #059669;
+  --accent-soft: rgba(16, 185, 129, 0.12);
+
+  --secondary-accent: #22d3ee;
+}
+
+/* Light theme */
+[data-theme="light"] {
+  color-scheme: light;
+
+  --app-bg: #f5f8fc;
+  --sidebar-bg: #ffffff;
+  --surface: #eef3f8;
+  --surface-hover: #e5edf5;
+
+  --border: #dce5ee;
+
+  --text-primary: #17243a;
+  --text-secondary: #64748b;
+
+  --accent: #059669;
+  --accent-hover: #047857;
+  --accent-soft: rgba(5, 150, 105, 0.10);
+
+  --secondary-accent: #0891b2;
+}
+
+/* Tailwind utility mappings */
+@theme inline {
+  --color-app-bg: var(--app-bg);
+  --color-sidebar: var(--sidebar-bg);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-border: var(--border);
+
+  --color-primary: var(--text-primary);
+  --color-secondary: var(--text-secondary);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-secondary-accent: var(--secondary-accent);
+
+  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Global browser defaults */
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    min-height: 100%;
+    margin: 0;
+  }
+
+  body {
+    background: var(--app-bg);
+    color: var(--text-primary);
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  button,
+  input,
+  textarea {
+    font: inherit;
+  }
+
+  button {
+    cursor: pointer;
+  }
+}
