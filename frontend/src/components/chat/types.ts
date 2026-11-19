@@ -9,4 +9,6 @@ export type ChatMessage = {
 
   // ID of the message this message replies to.
   replyTo?: string
+  // Indicates whether the message has been edited.
+   edited?: boolean
 }

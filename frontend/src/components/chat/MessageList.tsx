@@ -9,6 +9,7 @@ type MessageListProps = {
   savedScrollTop: number
   onScrollPositionChange: (scrollTop: number) => void
   onReply: (message: ChatMessage) => void
+  onEdit: (message: ChatMessage) => void
 }
 
 function MessageList({
@@ -17,6 +18,7 @@ function MessageList({
   savedScrollTop,
   onScrollPositionChange,
   onReply,
+  onEdit,
 }: MessageListProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const isFirstRender = useRef(true)
@@ -91,6 +93,7 @@ function MessageList({
               message={message}
               replyToMessage={replyToMessage}
               onReply={onReply}
+              onEdit={onEdit}
               onJumpToMessage={handleJumpToMessage}
             />
           )

@@ -1,11 +1,12 @@
 
-import { Check, CheckCheck, Reply } from 'lucide-react'
+import { Check, CheckCheck, Reply, Pencil } from 'lucide-react'
 import type { ChatMessage } from './types'
 
 type MessageBubbleProps = {
   message: ChatMessage
   replyToMessage?: ChatMessage
   onReply: (message: ChatMessage) => void
+  onEdit: (message: ChatMessage) => void
   onJumpToMessage: (messageId: string) => void
 }
 
@@ -13,6 +14,7 @@ function MessageBubble({
   message,
   replyToMessage,
   onReply,
+  onEdit,
   onJumpToMessage,
 }: MessageBubbleProps) {
   const isMine = message.sender === 'me'
@@ -26,15 +28,27 @@ function MessageBubble({
       }`}
     >
       <div className="flex items-center gap-1.5 max-w-[80%] sm:max-w-[65%]">
+
         {isMine && (
-          <button
-            type="button"
-            title="Reply to message"
-            onClick={() => onReply(message)}
-            className="w-7 h-7 shrink-0 rounded-full text-secondary opacity-0 group-hover:opacity-100 hover:bg-surface-hover hover:text-accent transition"
-          >
-            <Reply size={15} className="mx-auto" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              title="Reply to message"
+              onClick={() => onReply(message)}
+              className="w-7 h-7 shrink-0 rounded-full text-secondary opacity-0 group-hover:opacity-100 hover:bg-surface-hover hover:text-accent transition"
+            >
+              <Reply size={15} className="mx-auto" />
+            </button>
+
+            <button
+              type="button"
+              title="Edit message"
+              onClick={() => onEdit(message)}
+              className="w-7 h-7 shrink-0 rounded-full text-secondary opacity-0 group-hover:opacity-100 hover:bg-surface-hover hover:text-accent transition"
+            >
+              <Pencil size={14} className="mx-auto" />
+            </button>
+          </div>
         )}
 
         <div
@@ -82,6 +96,8 @@ function MessageBubble({
               isMine ? 'text-violet-100' : 'text-secondary'
             }`}
           >
+            {message.edited && <span>Edited</span>}
+
             <span>{message.time}</span>
 
             {isMine && (

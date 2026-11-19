@@ -57,6 +57,13 @@ function App() {
   const [replyingTo, setReplyingTo] =
     useState<ChatMessage | null>(null)
 
+    // Stores the message currently being edited.
+const [editingMessage, setEditingMessage] =
+  useState<ChatMessage | null>(null)
+
+// Stores the temporary text inside the edit composer.
+const [editingText, setEditingText] = useState('')
+
   const [selectedChatId, setSelectedChatId] =
     useState<string | null>(null)
 
@@ -95,6 +102,9 @@ function App() {
     // Clear any reply selected in the previous conversation.
     setReplyingTo(null)
 
+    setEditingMessage(null)
+    setEditingText('')
+
     // Opening a conversation marks its messages as read.
     setUnreadCounts((currentCounts) => ({
       ...currentCounts,
@@ -111,6 +121,53 @@ function App() {
       [selectedChatId]: value,
     }))
   }
+  // Starts editing an existing message.
+function handleEditMessage(message: ChatMessage) {
+  if (!selectedChatId) return
+
+  // Editing and replying should not happen simultaneously.
+  setReplyingTo(null)
+
+  setEditingMessage(message)
+  setEditingText(message.text)
+}
+
+// Saves the edited message.
+function handleSaveEdit(messageId: string, text: string) {
+  if (!selectedChatId) return
+
+  setMessagesByChat((currentMessages) => ({
+    ...currentMessages,
+    [selectedChatId]: (
+      currentMessages[selectedChatId] ?? []
+    ).map((message) =>
+      message.id === messageId
+        ? {
+            ...message,
+            text,
+            edited: true,
+          }
+        : message
+    ),
+  }))
+
+  // Exit edit mode after saving.
+  setEditingMessage(null)
+  setEditingText('')
+}
+
+// Cancels editing without changing the original message.
+function handleCancelEdit() {
+  setEditingMessage(null)
+  setEditingText('')
+}
+
+// Starts replying and exits edit mode if necessary.
+function handleReplyMessage(message: ChatMessage) {
+  setEditingMessage(null)
+  setEditingText('')
+  setReplyingTo(message)
+}
 
   // Sends a new message.
   function handleSendMessage(text: string) {
@@ -248,16 +305,30 @@ function App() {
               onScrollPositionChange={(scrollTop) => {
                 scrollPositions.current[selectedChatId] = scrollTop
               }}
-              onReply={setReplyingTo}
-            />
+        onReply={handleReplyMessage}
+        onEdit={handleEditMessage}            
 
-            <MessageComposer
-              value={drafts[selectedChatId] ?? ''}
-              onChange={handleDraftChange}
-              onSendMessage={handleSendMessage}
-              replyTo={replyingTo}
-              onCancelReply={() => setReplyingTo(null)}
-            />
+        />
+        
+
+           <MessageComposer
+            value={
+              editingMessage
+                ? editingText
+                : drafts[selectedChatId] ?? ''
+            }
+            onChange={
+              editingMessage
+                ? setEditingText
+                : handleDraftChange
+            }
+            onSendMessage={handleSendMessage}
+            replyTo={replyingTo}
+            onCancelReply={() => setReplyingTo(null)}
+            editingMessage={editingMessage}
+            onSaveEdit={handleSaveEdit}
+            onCancelEdit={handleCancelEdit}
+          />
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center px-6">
