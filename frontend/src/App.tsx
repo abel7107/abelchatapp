@@ -161,6 +161,73 @@ function handleCancelEdit() {
   setEditingMessage(null)
   setEditingText('')
 }
+        // Deletes a message only from the current user's conversation view.
+function handleDeleteForMe(message: ChatMessage) {
+  if (!selectedChatId) return
+
+  const confirmed = window.confirm(
+    'Are you sure you want to delete this message for yourself?'
+  )
+
+  if (!confirmed) return
+
+  setMessagesByChat((currentMessages) => ({
+    ...currentMessages,
+    [selectedChatId]: (
+      currentMessages[selectedChatId] ?? []
+    ).filter((item) => item.id !== message.id),
+  }))
+
+  // Close reply mode if this was the message being replied to.
+  setReplyingTo((current) =>
+    current?.id === message.id ? null : current
+  )
+
+  // Close edit mode if this was the message being edited.
+  if (editingMessage?.id === message.id) {
+    setEditingMessage(null)
+    setEditingText('')
+  }
+}
+
+// Deletes a message for everyone in the conversation.
+function handleDeleteForEveryone(message: ChatMessage) {
+  if (!selectedChatId) return
+
+  // Only messages sent by the current user can be deleted for everyone.
+  if (message.sender !== 'me') return
+
+  const confirmed = window.confirm(
+    'Are you sure you want to delete this message for everyone?'
+  )
+
+  if (!confirmed) return
+
+  setMessagesByChat((currentMessages) => ({
+    ...currentMessages,
+    [selectedChatId]: (
+      currentMessages[selectedChatId] ?? []
+    ).map((item) =>
+      item.id === message.id
+        ? {
+            ...item,
+            text: '',
+            edited: false,
+            deletedForEveryone: true,
+          }
+        : item
+    ),
+  }))
+
+  setReplyingTo((current) =>
+    current?.id === message.id ? null : current
+  )
+
+  if (editingMessage?.id === message.id) {
+    setEditingMessage(null)
+    setEditingText('')
+  }
+}
 
 // Starts replying and exits edit mode if necessary.
 function handleReplyMessage(message: ChatMessage) {
@@ -298,17 +365,18 @@ function handleReplyMessage(message: ChatMessage) {
               isGroup={selectedChat.isGroup}
             />
 
-            <MessageList
-              messages={selectedMessages}
-              chatId={selectedChatId}
-              savedScrollTop={scrollPositions.current[selectedChatId] ?? 0}
-              onScrollPositionChange={(scrollTop) => {
-                scrollPositions.current[selectedChatId] = scrollTop
-              }}
-        onReply={handleReplyMessage}
-        onEdit={handleEditMessage}            
-
-        />
+        <MessageList
+  messages={selectedMessages}
+  chatId={selectedChatId}
+  savedScrollTop={scrollPositions.current[selectedChatId] ?? 0}
+  onScrollPositionChange={(scrollTop) => {
+    scrollPositions.current[selectedChatId] = scrollTop
+  }}
+  onReply={handleReplyMessage}
+  onEdit={handleEditMessage}
+  onDeleteForMe={handleDeleteForMe}
+  onDeleteForEveryone={handleDeleteForEveryone}
+/>
         
 
            <MessageComposer

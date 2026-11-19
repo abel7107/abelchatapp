@@ -11,4 +11,8 @@ export type ChatMessage = {
   replyTo?: string
   // Indicates whether the message has been edited.
    edited?: boolean
+
+   // Indicates whether the message has been deleted for everyone.
+deletedForEveryone?: boolean
+
 }

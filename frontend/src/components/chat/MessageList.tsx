@@ -1,5 +1,6 @@
 
 import { useLayoutEffect, useRef } from 'react'
+
 import MessageBubble from './MessageBubble'
 import type { ChatMessage } from './types'
 
@@ -8,8 +9,12 @@ type MessageListProps = {
   chatId: string
   savedScrollTop: number
   onScrollPositionChange: (scrollTop: number) => void
+
   onReply: (message: ChatMessage) => void
   onEdit: (message: ChatMessage) => void
+
+  onDeleteForMe: (message: ChatMessage) => void
+  onDeleteForEveryone: (message: ChatMessage) => void
 }
 
 function MessageList({
@@ -19,6 +24,8 @@ function MessageList({
   onScrollPositionChange,
   onReply,
   onEdit,
+  onDeleteForMe,
+  onDeleteForEveryone,
 }: MessageListProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const isFirstRender = useRef(true)
@@ -94,6 +101,8 @@ function MessageList({
               replyToMessage={replyToMessage}
               onReply={onReply}
               onEdit={onEdit}
+              onDeleteForMe={onDeleteForMe}
+              onDeleteForEveryone={onDeleteForEveryone}
               onJumpToMessage={handleJumpToMessage}
             />
           )
