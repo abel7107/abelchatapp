@@ -11,6 +11,7 @@ type ChatHeaderProps = {
   initials: string
   isOnline: boolean
   isGroup?: boolean
+  isTyping?: boolean
 }
 
 function ChatHeader({
@@ -18,6 +19,7 @@ function ChatHeader({
   initials,
   isOnline,
   isGroup = false,
+  isTyping = false,
 }: ChatHeaderProps) {
   return (
     <header className="h-[76px] bg-white border-b border-border px-6 flex items-center justify-between shrink-0">
@@ -31,12 +33,16 @@ function ChatHeader({
             {name}
           </h2>
 
-          <p className="text-xs text-secondary mt-1">
-            {isGroup
-              ? 'Group conversation'
-              : isOnline
-                ? 'Online'
-                : 'Offline'}
+          <p className={`text-xs mt-1 ${
+            isTyping ? 'text-accent font-medium' : 'text-secondary'
+          }`}>
+            {isTyping
+              ? 'Typing...'
+              : isGroup
+                ? 'Group conversation'
+                : isOnline
+                  ? 'Online'
+                  : 'Offline'}
           </p>
         </div>
       </div>

@@ -2,6 +2,7 @@
 import { useLayoutEffect, useRef } from 'react'
 
 import MessageBubble from './MessageBubble'
+import TypingIndicator from './TypingIndicator'
 import type { ChatMessage } from './types'
 
 type MessageListProps = {
@@ -19,6 +20,8 @@ type MessageListProps = {
   onDeleteForEveryone: (message: ChatMessage) => void
 
   onToggleReaction: (message: ChatMessage, emoji: string) => void
+
+  isTyping: boolean
 }
 
 function MessageList({
@@ -33,6 +36,7 @@ function MessageList({
   onDeleteForMe,
   onDeleteForEveryone,
   onToggleReaction,
+  isTyping,
 }: MessageListProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const isFirstRender = useRef(true)
@@ -49,7 +53,7 @@ function MessageList({
     return () => cancelAnimationFrame(frameId)
   }, [chatId])
 
-  // Scroll down when the message list changes.
+  // Scroll down when messages or the typing indicator change.
   useLayoutEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false
@@ -63,7 +67,7 @@ function MessageList({
       top: container.scrollHeight,
       behavior: 'smooth',
     })
-  }, [messages])
+  }, [messages, isTyping])
 
   function handleJumpToMessage(messageId: string) {
     const container = containerRef.current
@@ -123,6 +127,8 @@ function MessageList({
             No messages yet. Start the conversation!
           </p>
         )}
+
+        <TypingIndicator isVisible={isTyping} />
       </div>
     </div>
   )

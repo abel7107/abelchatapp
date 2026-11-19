@@ -100,12 +100,20 @@ function App() {
   const selectedMessages = selectedChatId
     ? messagesByChat[selectedChatId] ?? []
     : []
+    const [isTypingPreview, setIsTypingPreview] = useState(false)
+
+const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Select a message. Clicking the same message again deselects it.
   function handleSelectMessage(message: ChatMessage) {
     setSelectedMessageId((currentId) =>
       currentId === message.id ? null : message.id,
     )
+    setIsTypingPreview(false)
+
+if (typingTimer.current) {
+  clearTimeout(typingTimer.current)
+}
   }
 
   // Clear selection when clicking outside messages or pressing Escape.
@@ -170,6 +178,26 @@ function App() {
       [selectedChatId]: value,
     }))
   }
+  // Updates the composer and previews the typing indicator.
+function handleComposerChange(value: string) {
+  if (editingMessage) {
+    setEditingText(value)
+  } else {
+    handleDraftChange(value)
+  }
+
+  setIsTypingPreview(value.trim().length > 0)
+
+  if (typingTimer.current) {
+    clearTimeout(typingTimer.current)
+  }
+
+  if (value.trim()) {
+    typingTimer.current = setTimeout(() => {
+      setIsTypingPreview(false)
+    }, 1500)
+  }
+}
 
   // Starts editing an existing message.
   function handleEditMessage(message: ChatMessage) {
@@ -490,6 +518,7 @@ function handleToggleReaction(message: ChatMessage, emoji: string) {
               initials={selectedChat.initials}
               isOnline={selectedChat.isOnline}
               isGroup={selectedChat.isGroup}
+              isTyping={isTypingPreview}
             />
 
             <MessageList
@@ -508,6 +537,7 @@ function handleToggleReaction(message: ChatMessage, emoji: string) {
               onDeleteForMe={handleDeleteForMe}
               onDeleteForEveryone={handleDeleteForEveryone}
               onToggleReaction={handleToggleReaction}
+              isTyping={isTypingPreview}
             />
 
 
@@ -517,11 +547,7 @@ function handleToggleReaction(message: ChatMessage, emoji: string) {
                   ? editingText
                   : drafts[selectedChatId] ?? ''
               }
-              onChange={
-                editingMessage
-                  ? setEditingText
-                  : handleDraftChange
-              }
+              onChange={handleComposerChange}
               onSendMessage={handleSendMessage}
               replyTo={replyingTo}
               onCancelReply={() => setReplyingTo(null)}
