@@ -295,6 +295,73 @@ function App() {
     setReplyingTo(message)
   }
 
+                  // Adds, changes, or removes the current user's reaction.
+function handleToggleReaction(message: ChatMessage, emoji: string) {
+  if (!selectedChatId) return
+
+  setMessagesByChat((currentMessages) => ({
+    ...currentMessages,
+    [selectedChatId]: (currentMessages[selectedChatId] ?? []).map(
+      (currentMessage) => {
+        if (currentMessage.id !== message.id) {
+          return currentMessage
+        }
+
+        const reactions = currentMessage.reactions ?? []
+
+        // Find the reaction this user has already selected.
+        const myReaction = reactions.find((reaction) =>
+          reaction.userIds.includes('me'),
+        )
+
+        // Clicking the same emoji removes the user's reaction.
+        if (myReaction?.emoji === emoji) {
+          return {
+            ...currentMessage,
+            reactions: reactions
+              .map((reaction) => ({
+                ...reaction,
+                userIds: reaction.userIds.filter(
+                  (userId) => userId !== 'me',
+                ),
+              }))
+              .filter((reaction) => reaction.userIds.length > 0),
+          }
+        }
+
+        // Remove the user's previous reaction, if one exists.
+        const updatedReactions = reactions
+          .map((reaction) => ({
+            ...reaction,
+            userIds: reaction.userIds.filter(
+              (userId) => userId !== 'me',
+            ),
+          }))
+          .filter((reaction) => reaction.userIds.length > 0)
+
+        // Add the user to the selected emoji, or create it.
+        const existingReaction = updatedReactions.find(
+          (reaction) => reaction.emoji === emoji,
+        )
+
+        if (existingReaction) {
+          existingReaction.userIds.push('me')
+        } else {
+          updatedReactions.push({
+            emoji,
+            userIds: ['me'],
+          })
+        }
+
+        return {
+          ...currentMessage,
+          reactions: updatedReactions,
+        }
+      },
+    ),
+  }))
+}
+
   // Sends a new message.
   function handleSendMessage(text: string) {
     if (!selectedChatId) return
@@ -440,7 +507,9 @@ function App() {
               onEdit={handleEditMessage}
               onDeleteForMe={handleDeleteForMe}
               onDeleteForEveryone={handleDeleteForEveryone}
+              onToggleReaction={handleToggleReaction}
             />
+
 
             <MessageComposer
               value={

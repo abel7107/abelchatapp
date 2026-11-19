@@ -1,4 +1,11 @@
+
 export type MessageStatus = 'sent' | 'delivered' | 'read'
+
+// Represents one emoji reaction and the users who selected it.
+export type MessageReaction = {
+  emoji: string
+  userIds: string[]
+}
 
 export type ChatMessage = {
   id: string
@@ -9,10 +16,13 @@ export type ChatMessage = {
 
   // ID of the message this message replies to.
   replyTo?: string
+
   // Indicates whether the message has been edited.
-   edited?: boolean
+  edited?: boolean
 
-   // Indicates whether the message has been deleted for everyone.
-deletedForEveryone?: boolean
+  // Indicates whether the message has been deleted for everyone.
+  deletedForEveryone?: boolean
 
+  // Reactions added to this message.
+  reactions?: MessageReaction[]
 }

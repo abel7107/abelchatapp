@@ -17,6 +17,8 @@ type MessageListProps = {
   onEdit: (message: ChatMessage) => void
   onDeleteForMe: (message: ChatMessage) => void
   onDeleteForEveryone: (message: ChatMessage) => void
+
+  onToggleReaction: (message: ChatMessage, emoji: string) => void
 }
 
 function MessageList({
@@ -30,6 +32,7 @@ function MessageList({
   onEdit,
   onDeleteForMe,
   onDeleteForEveryone,
+  onToggleReaction,
 }: MessageListProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const isFirstRender = useRef(true)
@@ -109,6 +112,7 @@ function MessageList({
               onEdit={onEdit}
               onDeleteForMe={onDeleteForMe}
               onDeleteForEveryone={onDeleteForEveryone}
+              onToggleReaction={onToggleReaction}
               onJumpToMessage={handleJumpToMessage}
             />
           )

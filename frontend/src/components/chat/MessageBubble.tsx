@@ -8,6 +8,7 @@ import {
   Pencil,
   Trash2,
   X,
+  Smile,
 } from 'lucide-react'
 
 import type { ChatMessage } from './types'
@@ -24,7 +25,10 @@ type MessageBubbleProps = {
   onDeleteForMe: (message: ChatMessage) => void
   onDeleteForEveryone: (message: ChatMessage) => void
   onJumpToMessage: (messageId: string) => void
+  onToggleReaction: (message: ChatMessage, emoji: string) => void
 }
+
+const availableEmojis = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '🎉']
 
 function MessageBubble({
   message,
@@ -36,11 +40,13 @@ function MessageBubble({
   onDeleteForMe,
   onDeleteForEveryone,
   onJumpToMessage,
+  onToggleReaction,
 }: MessageBubbleProps) {
   const isMine = message.sender === 'me'
   const isDeleted = message.deletedForEveryone === true
 
   const [showDeleteMenu, setShowDeleteMenu] = useState(false)
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
 
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const longPressTriggered = useRef(false)
@@ -72,15 +78,18 @@ function MessageBubble({
 
     onSelect(message)
     setShowDeleteMenu(false)
+    setShowEmojiPicker(false)
   }
 
   const handleReply = () => {
     setShowDeleteMenu(false)
+    setShowEmojiPicker(false)
     onReply(message)
   }
 
   const handleEdit = () => {
     setShowDeleteMenu(false)
+    setShowEmojiPicker(false)
     onEdit(message)
   }
 
@@ -92,6 +101,11 @@ function MessageBubble({
   const handleDeleteForEveryone = () => {
     setShowDeleteMenu(false)
     onDeleteForEveryone(message)
+  }
+
+  const handleEmojiSelect = (emoji: string) => {
+    onToggleReaction(message, emoji)
+    setShowEmojiPicker(false)
   }
 
   return (
@@ -139,21 +153,56 @@ function MessageBubble({
                     <Pencil size={15} />
                   </button>
                 )}
+
+                {/* Open emoji picker */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    title="Add reaction"
+                    onClick={() => {
+                      setShowDeleteMenu(false)
+                      setShowEmojiPicker((previous) => !previous)
+                    }}
+                    className={`${actionButtonClass} ${
+                      showEmojiPicker ? 'bg-soft-violet text-accent' : ''
+                    }`}
+                  >
+                    <Smile size={16} />
+                  </button>
+
+                  {showEmojiPicker && (
+                    <div className="absolute top-10 left-0 z-30 flex w-44 flex-wrap gap-1 rounded-xl border border-border bg-white p-2 shadow-xl">
+                      {availableEmojis.map((emoji) => (
+                        <button
+                          key={emoji}
+                          type="button"
+                          title={`React with ${emoji}`}
+                          onClick={() => handleEmojiSelect(emoji)}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-lg transition hover:bg-surface-hover"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </>
             )}
 
-            {/* One delete button */}
+            {/* Delete button */}
             <div className="relative">
               <button
                 type="button"
                 title="Delete"
-                onClick={() => setShowDeleteMenu((previous) => !previous)}
+                onClick={() => {
+                  setShowEmojiPicker(false)
+                  setShowDeleteMenu((previous) => !previous)
+                }}
                 className={`${actionButtonClass} hover:text-danger`}
               >
                 <Trash2 size={15} />
               </button>
 
-              {/* Delete options */}
               {showDeleteMenu && (
                 <div className="absolute top-10 left-0 z-30 min-w-44 overflow-hidden rounded-lg border border-border bg-white py-1 shadow-xl">
                   <button
@@ -182,6 +231,7 @@ function MessageBubble({
               title="Close selection"
               onClick={() => {
                 setShowDeleteMenu(false)
+                setShowEmojiPicker(false)
                 onSelect(message)
               }}
               className={actionButtonClass}
@@ -210,7 +260,7 @@ function MessageBubble({
             </p>
           ) : (
             <>
-              {/* Original message preview when replying */}
+              {/* Original message preview */}
               {replyToMessage && (
                 <button
                   type="button"
@@ -263,17 +313,13 @@ function MessageBubble({
                   : 'text-secondary'
             }`}
           >
-            {!isDeleted && message.edited && (
-              <span>Edited</span>
-            )}
+            {!isDeleted && message.edited && <span>Edited</span>}
 
             <span>{message.time}</span>
 
             {!isDeleted && isMine && (
               <>
-                {message.status === 'sent' && (
-                  <Check size={12} />
-                )}
+                {message.status === 'sent' && <Check size={12} />}
 
                 {(message.status === 'delivered' ||
                   message.status === 'read') && (
@@ -289,6 +335,35 @@ function MessageBubble({
               </>
             )}
           </div>
+
+          {/* Message reactions */}
+          {!isDeleted && message.reactions && message.reactions.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {message.reactions.map((reaction) => {
+                const reactedByMe = reaction.userIds.includes('me')
+
+                return (
+                  <button
+                    key={reaction.emoji}
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onToggleReaction(message, reaction.emoji)
+                    }}
+                    className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition ${
+                      reactedByMe
+                        ? 'border-accent bg-soft-violet text-accent'
+                        : 'border-border bg-surface text-secondary'
+                    }`}
+                    title={`${reaction.userIds.length} reaction(s)`}
+                  >
+                    <span>{reaction.emoji}</span>
+                    <span>{reaction.userIds.length}</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -8,6 +8,10 @@ export const sampleMessages: Record<string, ChatMessage[]> = {
       text: 'Hey! How is the project going?',
       time: '10:42',
       sender: 'other',
+      reactions: [
+        { emoji: '👍', userIds: ['me', 'user-2'] },
+        { emoji: '❤️', userIds: ['user-3'] },
+      ],
     },
     {
       id: 'm2',
@@ -15,6 +19,9 @@ export const sampleMessages: Record<string, ChatMessage[]> = {
       time: '10:43',
       sender: 'me',
       status: 'read',
+      reactions: [
+        { emoji: '🔥', userIds: ['me', 'user-2', 'user-3'] },
+      ],
     },
     {
       id: 'm3',
@@ -28,6 +35,10 @@ export const sampleMessages: Record<string, ChatMessage[]> = {
       time: '10:45',
       sender: 'me',
       status: 'delivered',
+      reactions: [
+        { emoji: '😂', userIds: ['user-2'] },
+        { emoji: '💯', userIds: ['me', 'user-3'] },
+      ],
     },
   ],
 
@@ -37,12 +48,19 @@ export const sampleMessages: Record<string, ChatMessage[]> = {
       text: 'Welcome everyone to the software engineering group!',
       time: '09:20',
       sender: 'other',
+      reactions: [
+        { emoji: '🎉', userIds: ['me', 'user-2', 'user-3'] },
+        { emoji: '❤️', userIds: ['user-4'] },
+      ],
     },
     {
       id: 'm6',
       text: 'I pushed the latest changes.',
       time: '09:35',
       sender: 'other',
+      reactions: [
+        { emoji: '👍', userIds: ['me'] },
+      ],
     },
   ],
 
@@ -59,6 +77,9 @@ export const sampleMessages: Record<string, ChatMessage[]> = {
       time: 'Yesterday',
       sender: 'me',
       status: 'read',
+      reactions: [
+        { emoji: '👏', userIds: ['me', 'user-2'] },
+      ],
     },
     {
       id: 'm9',
