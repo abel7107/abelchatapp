@@ -10,9 +10,11 @@ type MessageListProps = {
   savedScrollTop: number
   onScrollPositionChange: (scrollTop: number) => void
 
+  selectedMessageId: string | null
+  onSelectMessage: (message: ChatMessage) => void
+
   onReply: (message: ChatMessage) => void
   onEdit: (message: ChatMessage) => void
-
   onDeleteForMe: (message: ChatMessage) => void
   onDeleteForEveryone: (message: ChatMessage) => void
 }
@@ -22,6 +24,8 @@ function MessageList({
   chatId,
   savedScrollTop,
   onScrollPositionChange,
+  selectedMessageId,
+  onSelectMessage,
   onReply,
   onEdit,
   onDeleteForMe,
@@ -99,6 +103,8 @@ function MessageList({
               key={message.id}
               message={message}
               replyToMessage={replyToMessage}
+              isSelected={selectedMessageId === message.id}
+              onSelect={onSelectMessage}
               onReply={onReply}
               onEdit={onEdit}
               onDeleteForMe={onDeleteForMe}

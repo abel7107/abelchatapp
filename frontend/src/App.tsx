@@ -1,5 +1,5 @@
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import NavigationRail from './components/layout/NavigationRail'
 import ConversationSidebar from './components/layout/ConversationSidebar'
@@ -57,12 +57,16 @@ function App() {
   const [replyingTo, setReplyingTo] =
     useState<ChatMessage | null>(null)
 
-    // Stores the message currently being edited.
-const [editingMessage, setEditingMessage] =
-  useState<ChatMessage | null>(null)
+  // Stores the message currently being edited.
+  const [editingMessage, setEditingMessage] =
+    useState<ChatMessage | null>(null)
 
-// Stores the temporary text inside the edit composer.
-const [editingText, setEditingText] = useState('')
+  // Stores the temporary text inside the edit composer.
+  const [editingText, setEditingText] = useState('')
+
+  // Stores the ID of the currently selected message.
+  const [selectedMessageId, setSelectedMessageId] =
+    useState<string | null>(null)
 
   const [selectedChatId, setSelectedChatId] =
     useState<string | null>(null)
@@ -76,7 +80,9 @@ const [editingText, setEditingText] = useState('')
   const [drafts, setDrafts] = useState<Record<string, string>>({})
 
   // Stores how many unread messages each conversation has.
-  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({
+  const [unreadCounts, setUnreadCounts] = useState<
+    Record<string, number>
+  >({
     '1': 2,
     '2': 5,
     '3': 0,
@@ -95,13 +101,56 @@ const [editingText, setEditingText] = useState('')
     ? messagesByChat[selectedChatId] ?? []
     : []
 
+  // Select a message. Clicking the same message again deselects it.
+  function handleSelectMessage(message: ChatMessage) {
+    setSelectedMessageId((currentId) =>
+      currentId === message.id ? null : message.id,
+    )
+  }
+
+  // Clear selection when clicking outside messages or pressing Escape.
+  useEffect(() => {
+    if (!selectedMessageId) return
+
+    function handleOutsidePointerDown(event: PointerEvent) {
+      const target = event.target
+
+      if (!(target instanceof Element)) return
+
+      // Interactions inside a message must not clear its selection.
+      if (target.closest('[data-message-id]')) return
+
+      setSelectedMessageId(null)
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setSelectedMessageId(null)
+      }
+    }
+
+    document.addEventListener(
+      'pointerdown',
+      handleOutsidePointerDown,
+    )
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener(
+        'pointerdown',
+        handleOutsidePointerDown,
+      )
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [selectedMessageId])
+
   // Called when the user opens a conversation.
   function handleSelectChat(chatId: string) {
     setSelectedChatId(chatId)
+    setSelectedMessageId(null)
 
-    // Clear any reply selected in the previous conversation.
+    // Clear any reply or edit from the previous conversation.
     setReplyingTo(null)
-
     setEditingMessage(null)
     setEditingText('')
 
@@ -121,120 +170,130 @@ const [editingText, setEditingText] = useState('')
       [selectedChatId]: value,
     }))
   }
+
   // Starts editing an existing message.
-function handleEditMessage(message: ChatMessage) {
-  if (!selectedChatId) return
+  function handleEditMessage(message: ChatMessage) {
+    if (!selectedChatId) return
 
-  // Editing and replying should not happen simultaneously.
-  setReplyingTo(null)
+    setSelectedMessageId(null)
 
-  setEditingMessage(message)
-  setEditingText(message.text)
-}
+    // Editing and replying should not happen simultaneously.
+    setReplyingTo(null)
 
-// Saves the edited message.
-function handleSaveEdit(messageId: string, text: string) {
-  if (!selectedChatId) return
+    setEditingMessage(message)
+    setEditingText(message.text)
+  }
 
-  setMessagesByChat((currentMessages) => ({
-    ...currentMessages,
-    [selectedChatId]: (
-      currentMessages[selectedChatId] ?? []
-    ).map((message) =>
-      message.id === messageId
-        ? {
-            ...message,
-            text,
-            edited: true,
-          }
-        : message
-    ),
-  }))
+  // Saves the edited message.
+  function handleSaveEdit(messageId: string, text: string) {
+    if (!selectedChatId) return
 
-  // Exit edit mode after saving.
-  setEditingMessage(null)
-  setEditingText('')
-}
+    setMessagesByChat((currentMessages) => ({
+      ...currentMessages,
+      [selectedChatId]: (
+        currentMessages[selectedChatId] ?? []
+      ).map((message) =>
+        message.id === messageId
+          ? {
+              ...message,
+              text,
+              edited: true,
+            }
+          : message,
+      ),
+    }))
 
-// Cancels editing without changing the original message.
-function handleCancelEdit() {
-  setEditingMessage(null)
-  setEditingText('')
-}
-        // Deletes a message only from the current user's conversation view.
-function handleDeleteForMe(message: ChatMessage) {
-  if (!selectedChatId) return
+    // Exit edit mode after saving.
+    setEditingMessage(null)
+    setEditingText('')
+    setSelectedMessageId(null)
+  }
 
-  const confirmed = window.confirm(
-    'Are you sure you want to delete this message for yourself?'
-  )
-
-  if (!confirmed) return
-
-  setMessagesByChat((currentMessages) => ({
-    ...currentMessages,
-    [selectedChatId]: (
-      currentMessages[selectedChatId] ?? []
-    ).filter((item) => item.id !== message.id),
-  }))
-
-  // Close reply mode if this was the message being replied to.
-  setReplyingTo((current) =>
-    current?.id === message.id ? null : current
-  )
-
-  // Close edit mode if this was the message being edited.
-  if (editingMessage?.id === message.id) {
+  // Cancels editing without changing the original message.
+  function handleCancelEdit() {
     setEditingMessage(null)
     setEditingText('')
   }
-}
 
-// Deletes a message for everyone in the conversation.
-function handleDeleteForEveryone(message: ChatMessage) {
-  if (!selectedChatId) return
+  // Deletes a message only from the current user's conversation view.
+  function handleDeleteForMe(message: ChatMessage) {
+    if (!selectedChatId) return
 
-  // Only messages sent by the current user can be deleted for everyone.
-  if (message.sender !== 'me') return
+    const confirmed = window.confirm(
+      'Are you sure you want to delete this message for yourself?',
+    )
 
-  const confirmed = window.confirm(
-    'Are you sure you want to delete this message for everyone?'
-  )
+    if (!confirmed) return
 
-  if (!confirmed) return
+    setMessagesByChat((currentMessages) => ({
+      ...currentMessages,
+      [selectedChatId]: (
+        currentMessages[selectedChatId] ?? []
+      ).filter((item) => item.id !== message.id),
+    }))
 
-  setMessagesByChat((currentMessages) => ({
-    ...currentMessages,
-    [selectedChatId]: (
-      currentMessages[selectedChatId] ?? []
-    ).map((item) =>
-      item.id === message.id
-        ? {
-            ...item,
-            text: '',
-            edited: false,
-            deletedForEveryone: true,
-          }
-        : item
-    ),
-  }))
+    setSelectedMessageId(null)
 
-  setReplyingTo((current) =>
-    current?.id === message.id ? null : current
-  )
+    // Close reply mode if this was the message being replied to.
+    setReplyingTo((current) =>
+      current?.id === message.id ? null : current,
+    )
 
-  if (editingMessage?.id === message.id) {
+    // Close edit mode if this was the message being edited.
+    if (editingMessage?.id === message.id) {
+      setEditingMessage(null)
+      setEditingText('')
+    }
+  }
+
+  // Deletes a message for everyone in the conversation.
+  function handleDeleteForEveryone(message: ChatMessage) {
+    if (!selectedChatId) return
+
+    // Only messages sent by the current user can be deleted for everyone.
+    if (message.sender !== 'me') return
+
+    const confirmed = window.confirm(
+      'Are you sure you want to delete this message for everyone?',
+    )
+
+    if (!confirmed) return
+
+    setMessagesByChat((currentMessages) => ({
+      ...currentMessages,
+      [selectedChatId]: (
+        currentMessages[selectedChatId] ?? []
+      ).map((item) =>
+        item.id === message.id
+          ? {
+              ...item,
+              text: '',
+              edited: false,
+              deletedForEveryone: true,
+            }
+          : item,
+      ),
+    }))
+
+    setSelectedMessageId(null)
+
+    setReplyingTo((current) =>
+      current?.id === message.id ? null : current,
+    )
+
+    if (editingMessage?.id === message.id) {
+      setEditingMessage(null)
+      setEditingText('')
+    }
+  }
+
+  // Starts replying and exits edit mode if necessary.
+  function handleReplyMessage(message: ChatMessage) {
+    setSelectedMessageId(null)
     setEditingMessage(null)
     setEditingText('')
+    setReplyingTo(message)
   }
-}
-
-// Starts replying and exits edit mode if necessary.
-function handleReplyMessage(message: ChatMessage) {
-  setEditingMessage(null)
-  setEditingText('')
-  setReplyingTo(message)
-}
 
   // Sends a new message.
   function handleSendMessage(text: string) {
@@ -280,7 +339,7 @@ function handleReplyMessage(message: ChatMessage) {
         [chatId]: (currentMessages[chatId] ?? []).map((message) =>
           message.id === messageId
             ? { ...message, status: 'delivered' }
-            : message
+            : message,
         ),
       }))
     }, 1000)
@@ -292,13 +351,14 @@ function handleReplyMessage(message: ChatMessage) {
         [chatId]: (currentMessages[chatId] ?? []).map((message) =>
           message.id === messageId
             ? { ...message, status: 'read' }
-            : message
+            : message,
         ),
       }))
     }, 5000)
 
     // Clear the reply selection after sending.
     setReplyingTo(null)
+    setSelectedMessageId(null)
   }
 
   // Temporary testing function: simulates a message from another user.
@@ -365,38 +425,41 @@ function handleReplyMessage(message: ChatMessage) {
               isGroup={selectedChat.isGroup}
             />
 
-        <MessageList
-  messages={selectedMessages}
-  chatId={selectedChatId}
-  savedScrollTop={scrollPositions.current[selectedChatId] ?? 0}
-  onScrollPositionChange={(scrollTop) => {
-    scrollPositions.current[selectedChatId] = scrollTop
-  }}
-  onReply={handleReplyMessage}
-  onEdit={handleEditMessage}
-  onDeleteForMe={handleDeleteForMe}
-  onDeleteForEveryone={handleDeleteForEveryone}
-/>
-        
+            <MessageList
+              messages={selectedMessages}
+              chatId={selectedChatId}
+              savedScrollTop={
+                scrollPositions.current[selectedChatId] ?? 0
+              }
+              onScrollPositionChange={(scrollTop) => {
+                scrollPositions.current[selectedChatId] = scrollTop
+              }}
+              selectedMessageId={selectedMessageId}
+              onSelectMessage={handleSelectMessage}
+              onReply={handleReplyMessage}
+              onEdit={handleEditMessage}
+              onDeleteForMe={handleDeleteForMe}
+              onDeleteForEveryone={handleDeleteForEveryone}
+            />
 
-           <MessageComposer
-            value={
-              editingMessage
-                ? editingText
-                : drafts[selectedChatId] ?? ''
-            }
-            onChange={
-              editingMessage
-                ? setEditingText
-                : handleDraftChange
-            }
-            onSendMessage={handleSendMessage}
-            replyTo={replyingTo}
-            onCancelReply={() => setReplyingTo(null)}
-            editingMessage={editingMessage}
-            onSaveEdit={handleSaveEdit}
-            onCancelEdit={handleCancelEdit}
-          />
+            <MessageComposer
+              value={
+                editingMessage
+                  ? editingText
+                  : drafts[selectedChatId] ?? ''
+              }
+              onChange={
+                editingMessage
+                  ? setEditingText
+                  : handleDraftChange
+              }
+              onSendMessage={handleSendMessage}
+              replyTo={replyingTo}
+              onCancelReply={() => setReplyingTo(null)}
+              editingMessage={editingMessage}
+              onSaveEdit={handleSaveEdit}
+              onCancelEdit={handleCancelEdit}
+            />
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center px-6">
