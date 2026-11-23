@@ -463,6 +463,24 @@ function App() {
     }))
   }
 
+      // Pins or unpins a message in the current conversation.
+    function handleTogglePin(message: ChatMessage) {
+      if (!selectedChatId) return
+
+      setMessagesByChat((currentMessages) => ({
+        ...currentMessages,
+        [selectedChatId]: (
+          currentMessages[selectedChatId] ?? []
+        ).map((currentMessage) =>
+          currentMessage.id === message.id
+            ? {
+                ...currentMessage,
+                pinned: !currentMessage.pinned,
+              }
+            : currentMessage,
+        ),
+      }))
+    }
   // Sends a new message.
   function handleSendMessage(text: string) {
     if (!selectedChatId) return
@@ -618,6 +636,7 @@ function App() {
                   onDeleteForMe={handleDeleteForMe}
                   onDeleteForEveryone={handleDeleteForEveryone}
                   onToggleReaction={handleToggleReaction}
+                  onTogglePin={handleTogglePin}
                   isTyping={isTypingPreview}
                 />
 

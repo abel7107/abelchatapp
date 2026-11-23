@@ -9,6 +9,7 @@ import {
   Trash2,
   X,
   Smile,
+  Pin,
 } from 'lucide-react'
 
 import type { ChatMessage } from './types'
@@ -26,6 +27,7 @@ type MessageBubbleProps = {
   onDeleteForEveryone: (message: ChatMessage) => void
   onJumpToMessage: (messageId: string) => void
   onToggleReaction: (message: ChatMessage, emoji: string) => void
+  onTogglePin: (message: ChatMessage) => void
 }
 
 const availableEmojis = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '🎉']
@@ -41,6 +43,7 @@ function MessageBubble({
   onDeleteForEveryone,
   onJumpToMessage,
   onToggleReaction,
+  onTogglePin,
 }: MessageBubbleProps) {
   const isMine = message.sender === 'me'
   const isDeleted = message.deletedForEveryone === true
@@ -141,6 +144,16 @@ function MessageBubble({
                   className={actionButtonClass}
                 >
                   <Reply size={16} />
+                </button>
+                <button
+                  type="button"
+                  title={message.pinned ? 'Unpin message' : 'Pin message'}
+                  onClick={() => onTogglePin(message)}
+                  className={`${actionButtonClass} ${
+                    message.pinned ? 'bg-soft-violet text-accent' : ''
+                  }`}
+                >
+                  <Pin size={15} />
                 </button>
 
                 {isMine && (
@@ -315,8 +328,16 @@ function MessageBubble({
           >
             {!isDeleted && message.edited && <span>Edited</span>}
 
-            <span>{message.time}</span>
+            {!isDeleted && message.pinned && (
+              <Pin
+                size={11}
+                className="shrink-0"
+                aria-label="Pinned message"
+                title="Pinned message"
+              />
+            )}
 
+            <span>{message.time}</span>
             {!isDeleted && isMine && (
               <>
                 {message.status === 'sent' && <Check size={12} />}

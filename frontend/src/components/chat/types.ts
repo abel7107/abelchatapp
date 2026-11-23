@@ -25,4 +25,7 @@ export type ChatMessage = {
 
   // Reactions added to this message.
   reactions?: MessageReaction[]
+
+  // Indicates whether the message is pinned.
+  pinned?: boolean
 }
