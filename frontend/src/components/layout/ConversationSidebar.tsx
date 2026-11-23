@@ -29,6 +29,16 @@ type ConversationSidebarProps = {
   lastActivityByChat: Record<string, number>
   unreadCounts: Record<string, number>
   onSimulateIncomingMessage: () => void
+
+  chatDetails: Record<
+    string,
+    {
+      name: string
+      initials: string
+      isOnline: boolean
+      isGroup: boolean
+    }
+  >
 }
 
 const conversations: ChatPreview[] = [
@@ -98,54 +108,67 @@ function ConversationSidebar({
   lastActivityByChat,
   unreadCounts,
   onSimulateIncomingMessage,
+  chatDetails,
 }: ConversationSidebarProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeFilter, setActiveFilter] = useState<FilterType>('all')
 
   const filteredConversations = useMemo(() => {
-    const updatedConversations = conversations.map((chat) => {
-      const chatMessages = messagesByChat[chat.id] ?? []
+  const updatedConversations = Object.entries(chatDetails).map(
+    ([chatId, details]) => {
+      const existingChat = conversations.find(
+        (chat) => chat.id === chatId,
+      )
+
+      const chatMessages = messagesByChat[chatId] ?? []
       const latestMessage = chatMessages[chatMessages.length - 1]
 
       return {
-        ...chat,
+        id: chatId,
+        name: details.name,
+        initials: details.initials,
+        isOnline: details.isOnline,
+        isGroup: details.isGroup,
+
         message: latestMessage
           ? latestMessage.sender === 'me'
             ? `You: ${latestMessage.text}`
             : latestMessage.text
-          : chat.message,
-        time: latestMessage?.time ?? chat.time,
-        unreadCount: unreadCounts[chat.id] ?? 0,
+          : existingChat?.message ?? 'Start a conversation',
+
+        time: latestMessage?.time ?? existingChat?.time ?? '',
+        color: existingChat?.color ?? 'bg-violet-600',
+        unreadCount: unreadCounts[chatId] ?? 0,
       }
-    })
+    },
+  )
 
-    // Move conversations with recent activity to the top.
-    updatedConversations.sort((a, b) => {
-      return (
-        (lastActivityByChat[b.id] ?? 0) -
-        (lastActivityByChat[a.id] ?? 0)
-      )
-    })
+  updatedConversations.sort(
+    (a, b) =>
+      (lastActivityByChat[b.id] ?? 0) -
+      (lastActivityByChat[a.id] ?? 0),
+  )
 
-    return updatedConversations.filter((chat) => {
-      const matchesSearch =
-        chat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        chat.message.toLowerCase().includes(searchQuery.toLowerCase())
+  return updatedConversations.filter((chat) => {
+    const matchesSearch =
+      chat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      chat.message.toLowerCase().includes(searchQuery.toLowerCase())
 
-      const matchesFilter =
-        activeFilter === 'all' ||
-        (activeFilter === 'unread' && chat.unreadCount > 0) ||
-        (activeFilter === 'groups' && chat.isGroup)
+    const matchesFilter =
+      activeFilter === 'all' ||
+      (activeFilter === 'unread' && chat.unreadCount > 0) ||
+      (activeFilter === 'groups' && chat.isGroup)
 
-      return matchesSearch && matchesFilter
-    })
-  }, [
-    searchQuery,
-    activeFilter,
-    messagesByChat,
-    lastActivityByChat,
-     unreadCounts,
-  ])
+    return matchesSearch && matchesFilter
+  })
+}, [
+  searchQuery,
+  activeFilter,
+  messagesByChat,
+  lastActivityByChat,
+  unreadCounts,
+  chatDetails,
+])
 
   return (
     <aside className="w-[360px] h-screen bg-sidebar border-r border-border flex flex-col shrink-0">

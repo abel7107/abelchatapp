@@ -7,7 +7,40 @@ import {
   Settings,
 } from 'lucide-react'
 
-function NavigationRail() {
+type NavigationPage = 'chats' | 'calls' | 'status' | 'contacts' | 'settings'
+
+type NavigationRailProps = {
+  activePage: NavigationPage
+  onNavigate: (page: NavigationPage) => void
+}
+
+function NavigationRail({
+  activePage,
+  onNavigate,
+}: NavigationRailProps) {
+  const navigationItems = [
+    {
+      id: 'chats' as const,
+      label: 'Chats',
+      icon: MessageCircle,
+    },
+    {
+      id: 'calls' as const,
+      label: 'Calls',
+      icon: Phone,
+    },
+    {
+      id: 'status' as const,
+      label: 'Status',
+      icon: CircleDot,
+    },
+    {
+      id: 'contacts' as const,
+      label: 'Contacts',
+      icon: Users,
+    },
+  ]
+
   return (
     <aside className="w-[76px] h-screen bg-sidebar border-r border-border flex flex-col items-center py-5">
 
@@ -18,43 +51,44 @@ function NavigationRail() {
 
       {/* Navigation items */}
       <nav className="flex flex-col items-center gap-5">
+        {navigationItems.map((item) => {
+          const Icon = item.icon
+          const isActive = activePage === item.id
 
-        <button
-          title="Chats"
-          className="w-11 h-11 rounded-xl bg-accent-soft text-accent flex items-center justify-center"
-        >
-          <MessageCircle size={22} />
-        </button>
-
-        <button
-          title="Calls"
-          className="w-11 h-11 rounded-xl text-secondary hover:bg-surface hover:text-primary flex items-center justify-center transition"
-        >
-          <Phone size={22} />
-        </button>
-
-        <button
-          title="Status"
-          className="w-11 h-11 rounded-xl text-secondary hover:bg-surface hover:text-primary flex items-center justify-center transition"
-        >
-          <CircleDot size={22} />
-        </button>
-
-        <button
-          title="Contacts"
-          className="w-11 h-11 rounded-xl text-secondary hover:bg-surface hover:text-primary flex items-center justify-center transition"
-        >
-          <Users size={22} />
-        </button>
-
+          return (
+            <button
+              key={item.id}
+              type="button"
+              title={item.label}
+              aria-label={item.label}
+              aria-current={isActive ? 'page' : undefined}
+              onClick={() => onNavigate(item.id)}
+              className={`w-11 h-11 rounded-xl flex items-center justify-center transition ${
+                isActive
+                  ? 'bg-accent-soft text-accent'
+                  : 'text-secondary hover:bg-surface hover:text-primary'
+              }`}
+            >
+              <Icon size={22} />
+            </button>
+          )
+        })}
       </nav>
 
       {/* Settings and profile */}
       <div className="mt-auto flex flex-col items-center gap-5">
 
         <button
+          type="button"
           title="Settings"
-          className="w-11 h-11 rounded-xl text-secondary hover:bg-surface hover:text-primary flex items-center justify-center transition"
+          aria-label="Settings"
+          aria-current={activePage === 'settings' ? 'page' : undefined}
+          onClick={() => onNavigate('settings')}
+          className={`w-11 h-11 rounded-xl flex items-center justify-center transition ${
+            activePage === 'settings'
+              ? 'bg-accent-soft text-accent'
+              : 'text-secondary hover:bg-surface hover:text-primary'
+          }`}
         >
           <Settings size={22} />
         </button>
@@ -67,7 +101,6 @@ function NavigationRail() {
         </div>
 
       </div>
-
     </aside>
   )
 }

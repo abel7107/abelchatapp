@@ -10,16 +10,17 @@ import MessageComposer from './components/chat/MessageComposer'
 
 import { sampleMessages } from './components/chat/sampleMessages'
 import type { ChatMessage } from './components/chat/types'
+import ContactsPage from './components/contacts/ContactsPage'
+import type { Contact } from './components/contacts/types'
 
-const chatDetails: Record<
-  string,
-  {
-    name: string
-    initials: string
-    isOnline: boolean
-    isGroup: boolean
-  }
-> = {
+type ChatDetails = {
+  name: string
+  initials: string
+  isOnline: boolean
+  isGroup: boolean
+}
+
+const initialChatDetails: Record<string, ChatDetails> = {
   '1': {
     name: 'Abel',
     initials: 'AB',
@@ -52,6 +53,13 @@ const chatDetails: Record<
   },
 }
 
+type NavigationPage =
+  | 'chats'
+  | 'calls'
+  | 'status'
+  | 'contacts'
+  | 'settings'
+
 function App() {
   // Stores the message currently selected for replying.
   const [replyingTo, setReplyingTo] =
@@ -71,6 +79,10 @@ function App() {
   const [selectedChatId, setSelectedChatId] =
     useState<string | null>(null)
 
+  // Stores conversation details dynamically.
+  const [chatDetails, setChatDetails] =
+    useState<Record<string, ChatDetails>>(initialChatDetails)
+
   const [lastActivityByChat, setLastActivityByChat] =
     useState<Record<string, number>>({})
 
@@ -79,7 +91,10 @@ function App() {
 
   const [drafts, setDrafts] = useState<Record<string, string>>({})
 
-  // Stores how many unread messages each conversation has.
+  const [activePage, setActivePage] =
+    useState<NavigationPage>('chats')
+
+  // Stores unread message counts.
   const [unreadCounts, setUnreadCounts] = useState<
     Record<string, number>
   >({
@@ -100,20 +115,22 @@ function App() {
   const selectedMessages = selectedChatId
     ? messagesByChat[selectedChatId] ?? []
     : []
-    const [isTypingPreview, setIsTypingPreview] = useState(false)
 
-const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [isTypingPreview, setIsTypingPreview] = useState(false)
+
+  const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Select a message. Clicking the same message again deselects it.
   function handleSelectMessage(message: ChatMessage) {
     setSelectedMessageId((currentId) =>
       currentId === message.id ? null : message.id,
     )
+
     setIsTypingPreview(false)
 
-if (typingTimer.current) {
-  clearTimeout(typingTimer.current)
-}
+    if (typingTimer.current) {
+      clearTimeout(typingTimer.current)
+    }
   }
 
   // Clear selection when clicking outside messages or pressing Escape.
@@ -141,6 +158,7 @@ if (typingTimer.current) {
       'pointerdown',
       handleOutsidePointerDown,
     )
+
     document.addEventListener('keydown', handleKeyDown)
 
     return () => {
@@ -148,6 +166,7 @@ if (typingTimer.current) {
         'pointerdown',
         handleOutsidePointerDown,
       )
+
       document.removeEventListener('keydown', handleKeyDown)
     }
   }, [selectedMessageId])
@@ -169,6 +188,59 @@ if (typingTimer.current) {
     }))
   }
 
+  // Called when the user clicks Message on a contact.
+  function handleMessageContact(contact: Contact) {
+    // Check whether a conversation with this contact already exists.
+    const existingChatId = Object.entries(chatDetails).find(
+      ([, chat]) =>
+        !chat.isGroup &&
+        chat.name.toLowerCase() === contact.name.toLowerCase(),
+    )?.[0]
+
+    // Open the existing conversation if one is found.
+    if (existingChatId) {
+      setActivePage('chats')
+      handleSelectChat(existingChatId)
+      return
+    }
+
+    // Otherwise, create a new conversation ID.
+    const newChatId = crypto.randomUUID()
+
+    // Add the contact's details to our chat records.
+    setChatDetails((currentDetails) => ({
+      ...currentDetails,
+      [newChatId]: {
+        name: contact.name,
+        initials: contact.initials,
+        isOnline: contact.isOnline,
+        isGroup: false,
+      },
+    }))
+
+    // Prepare an empty message history for this chat.
+    setMessagesByChat((currentMessages) => ({
+      ...currentMessages,
+      [newChatId]: [],
+    }))
+
+    // Initialize the unread count.
+    setUnreadCounts((currentCounts) => ({
+      ...currentCounts,
+      [newChatId]: 0,
+    }))
+
+    // Give the new conversation a recent activity timestamp.
+    setLastActivityByChat((currentActivity) => ({
+      ...currentActivity,
+      [newChatId]: Date.now(),
+    }))
+
+    // Navigate to Chats and open the new conversation.
+    setActivePage('chats')
+    handleSelectChat(newChatId)
+  }
+
   // Saves the draft separately for each conversation.
   function handleDraftChange(value: string) {
     if (!selectedChatId) return
@@ -178,26 +250,27 @@ if (typingTimer.current) {
       [selectedChatId]: value,
     }))
   }
+
   // Updates the composer and previews the typing indicator.
-function handleComposerChange(value: string) {
-  if (editingMessage) {
-    setEditingText(value)
-  } else {
-    handleDraftChange(value)
-  }
+  function handleComposerChange(value: string) {
+    if (editingMessage) {
+      setEditingText(value)
+    } else {
+      handleDraftChange(value)
+    }
 
-  setIsTypingPreview(value.trim().length > 0)
+    setIsTypingPreview(value.trim().length > 0)
 
-  if (typingTimer.current) {
-    clearTimeout(typingTimer.current)
-  }
+    if (typingTimer.current) {
+      clearTimeout(typingTimer.current)
+    }
 
-  if (value.trim()) {
-    typingTimer.current = setTimeout(() => {
-      setIsTypingPreview(false)
-    }, 1500)
+    if (value.trim()) {
+      typingTimer.current = setTimeout(() => {
+        setIsTypingPreview(false)
+      }, 1500)
+    }
   }
-}
 
   // Starts editing an existing message.
   function handleEditMessage(message: ChatMessage) {
@@ -323,72 +396,72 @@ function handleComposerChange(value: string) {
     setReplyingTo(message)
   }
 
-                  // Adds, changes, or removes the current user's reaction.
-function handleToggleReaction(message: ChatMessage, emoji: string) {
-  if (!selectedChatId) return
+  // Adds, changes, or removes the current user's reaction.
+  function handleToggleReaction(message: ChatMessage, emoji: string) {
+    if (!selectedChatId) return
 
-  setMessagesByChat((currentMessages) => ({
-    ...currentMessages,
-    [selectedChatId]: (currentMessages[selectedChatId] ?? []).map(
-      (currentMessage) => {
-        if (currentMessage.id !== message.id) {
-          return currentMessage
-        }
+    setMessagesByChat((currentMessages) => ({
+      ...currentMessages,
+      [selectedChatId]: (currentMessages[selectedChatId] ?? []).map(
+        (currentMessage) => {
+          if (currentMessage.id !== message.id) {
+            return currentMessage
+          }
 
-        const reactions = currentMessage.reactions ?? []
+          const reactions = currentMessage.reactions ?? []
 
-        // Find the reaction this user has already selected.
-        const myReaction = reactions.find((reaction) =>
-          reaction.userIds.includes('me'),
-        )
+          // Find the reaction this user has already selected.
+          const myReaction = reactions.find((reaction) =>
+            reaction.userIds.includes('me'),
+          )
 
-        // Clicking the same emoji removes the user's reaction.
-        if (myReaction?.emoji === emoji) {
+          // Clicking the same emoji removes the user's reaction.
+          if (myReaction?.emoji === emoji) {
+            return {
+              ...currentMessage,
+              reactions: reactions
+                .map((reaction) => ({
+                  ...reaction,
+                  userIds: reaction.userIds.filter(
+                    (userId) => userId !== 'me',
+                  ),
+                }))
+                .filter((reaction) => reaction.userIds.length > 0),
+            }
+          }
+
+          // Remove the user's previous reaction, if one exists.
+          const updatedReactions = reactions
+            .map((reaction) => ({
+              ...reaction,
+              userIds: reaction.userIds.filter(
+                (userId) => userId !== 'me',
+              ),
+            }))
+            .filter((reaction) => reaction.userIds.length > 0)
+
+          // Add the user to the selected emoji, or create it.
+          const existingReaction = updatedReactions.find(
+            (reaction) => reaction.emoji === emoji,
+          )
+
+          if (existingReaction) {
+            existingReaction.userIds.push('me')
+          } else {
+            updatedReactions.push({
+              emoji,
+              userIds: ['me'],
+            })
+          }
+
           return {
             ...currentMessage,
-            reactions: reactions
-              .map((reaction) => ({
-                ...reaction,
-                userIds: reaction.userIds.filter(
-                  (userId) => userId !== 'me',
-                ),
-              }))
-              .filter((reaction) => reaction.userIds.length > 0),
+            reactions: updatedReactions,
           }
-        }
-
-        // Remove the user's previous reaction, if one exists.
-        const updatedReactions = reactions
-          .map((reaction) => ({
-            ...reaction,
-            userIds: reaction.userIds.filter(
-              (userId) => userId !== 'me',
-            ),
-          }))
-          .filter((reaction) => reaction.userIds.length > 0)
-
-        // Add the user to the selected emoji, or create it.
-        const existingReaction = updatedReactions.find(
-          (reaction) => reaction.emoji === emoji,
-        )
-
-        if (existingReaction) {
-          existingReaction.userIds.push('me')
-        } else {
-          updatedReactions.push({
-            emoji,
-            userIds: ['me'],
-          })
-        }
-
-        return {
-          ...currentMessage,
-          reactions: updatedReactions,
-        }
-      },
-    ),
-  }))
-}
+        },
+      ),
+    }))
+  }
 
   // Sends a new message.
   function handleSendMessage(text: string) {
@@ -459,7 +532,7 @@ function handleToggleReaction(message: ChatMessage, emoji: string) {
   // Temporary testing function: simulates a message from another user.
   function handleSimulateIncomingMessage() {
     const targetChatId =
-      ['1', '2', '3', '4', '5'].find(
+      Object.keys(chatDetails).find(
         (chatId) => chatId !== selectedChatId,
       ) ?? '1'
 
@@ -499,82 +572,105 @@ function handleToggleReaction(message: ChatMessage, emoji: string) {
 
   return (
     <div className="h-screen overflow-hidden bg-app-bg text-primary flex">
-      <NavigationRail />
-
-      <ConversationSidebar
-        selectedChatId={selectedChatId}
-        onSelectChat={handleSelectChat}
-        messagesByChat={messagesByChat}
-        lastActivityByChat={lastActivityByChat}
-        unreadCounts={unreadCounts}
-        onSimulateIncomingMessage={handleSimulateIncomingMessage}
+      {/* Navigation rail is always visible */}
+      <NavigationRail
+        activePage={activePage}
+        onNavigate={setActivePage}
       />
 
-      <main className="flex-1 min-w-0 flex flex-col bg-app-bg">
-        {selectedChat && selectedChatId ? (
-          <>
-            <ChatHeader
-              name={selectedChat.name}
-              initials={selectedChat.initials}
-              isOnline={selectedChat.isOnline}
-              isGroup={selectedChat.isGroup}
-              isTyping={isTypingPreview}
-            />
+      {/* Chats page */}
+      {activePage === 'chats' && (
+        <>
+          <ConversationSidebar
+            selectedChatId={selectedChatId}
+            onSelectChat={handleSelectChat}
+            messagesByChat={messagesByChat}
+            lastActivityByChat={lastActivityByChat}
+            unreadCounts={unreadCounts}
+            onSimulateIncomingMessage={handleSimulateIncomingMessage}
+            chatDetails={chatDetails}
+          />
 
-            <MessageList
-              messages={selectedMessages}
-              chatId={selectedChatId}
-              savedScrollTop={
-                scrollPositions.current[selectedChatId] ?? 0
-              }
-              onScrollPositionChange={(scrollTop) => {
-                scrollPositions.current[selectedChatId] = scrollTop
-              }}
-              selectedMessageId={selectedMessageId}
-              onSelectMessage={handleSelectMessage}
-              onReply={handleReplyMessage}
-              onEdit={handleEditMessage}
-              onDeleteForMe={handleDeleteForMe}
-              onDeleteForEveryone={handleDeleteForEveryone}
-              onToggleReaction={handleToggleReaction}
-              isTyping={isTypingPreview}
-            />
+          <main className="flex-1 min-w-0 flex flex-col bg-app-bg">
+            {selectedChat && selectedChatId ? (
+              <>
+                <ChatHeader
+                  name={selectedChat.name}
+                  initials={selectedChat.initials}
+                  isOnline={selectedChat.isOnline}
+                  isGroup={selectedChat.isGroup}
+                  isTyping={isTypingPreview}
+                />
 
+                <MessageList
+                  messages={selectedMessages}
+                  chatId={selectedChatId}
+                  savedScrollTop={
+                    scrollPositions.current[selectedChatId] ?? 0
+                  }
+                  onScrollPositionChange={(scrollTop) => {
+                    scrollPositions.current[selectedChatId] = scrollTop
+                  }}
+                  selectedMessageId={selectedMessageId}
+                  onSelectMessage={handleSelectMessage}
+                  onReply={handleReplyMessage}
+                  onEdit={handleEditMessage}
+                  onDeleteForMe={handleDeleteForMe}
+                  onDeleteForEveryone={handleDeleteForEveryone}
+                  onToggleReaction={handleToggleReaction}
+                  isTyping={isTypingPreview}
+                />
 
-            <MessageComposer
-              value={
-                editingMessage
-                  ? editingText
-                  : drafts[selectedChatId] ?? ''
-              }
-              onChange={handleComposerChange}
-              onSendMessage={handleSendMessage}
-              replyTo={replyingTo}
-              onCancelReply={() => setReplyingTo(null)}
-              editingMessage={editingMessage}
-              onSaveEdit={handleSaveEdit}
-              onCancelEdit={handleCancelEdit}
-            />
-          </>
-        ) : (
-          <div className="flex-1 flex items-center justify-center px-6">
-            <div className="text-center max-w-md">
-              <div className="w-20 h-20 rounded-3xl bg-accent-soft text-accent flex items-center justify-center mx-auto mb-6">
-                <span className="text-4xl">✦</span>
+                <MessageComposer
+                  value={
+                    editingMessage
+                      ? editingText
+                      : drafts[selectedChatId] ?? ''
+                  }
+                  onChange={handleComposerChange}
+                  onSendMessage={handleSendMessage}
+                  replyTo={replyingTo}
+                  onCancelReply={() => setReplyingTo(null)}
+                  editingMessage={editingMessage}
+                  onSaveEdit={handleSaveEdit}
+                  onCancelEdit={handleCancelEdit}
+                />
+              </>
+            ) : (
+              <div className="flex-1 flex items-center justify-center px-6">
+                <div className="text-center max-w-md">
+                  <div className="w-20 h-20 rounded-3xl bg-accent-soft text-accent flex items-center justify-center mx-auto mb-6">
+                    <span className="text-4xl">✦</span>
+                  </div>
+
+                  <h1 className="text-3xl font-bold mb-3">
+                    Welcome to Abelchat
+                  </h1>
+
+                  <p className="text-secondary leading-relaxed">
+                    Your conversations belong here.
+                    Select a conversation to start chatting.
+                  </p>
+                </div>
               </div>
+            )}
+          </main>
+        </>
+      )}
 
-              <h1 className="text-3xl font-bold mb-3">
-                Welcome to Abelchat
-              </h1>
+      {/* Contacts page */}
+      {activePage === 'contacts' && (
+        <ContactsPage onMessageContact={handleMessageContact} />
+      )}
 
-              <p className="text-secondary leading-relaxed">
-                Your conversations belong here.
-                Select a conversation to start chatting.
-              </p>
-            </div>
-          </div>
-        )}
-      </main>
+      {/* Pages we haven't implemented yet */}
+      {activePage !== 'chats' && activePage !== 'contacts' && (
+        <main className="flex-1 flex items-center justify-center">
+          <p className="text-secondary">
+            This page is coming soon.
+          </p>
+        </main>
+      )}
     </div>
   )
 }
