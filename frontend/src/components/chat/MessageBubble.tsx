@@ -10,6 +10,7 @@ import {
   X,
   Smile,
   Pin,
+  Forward,
 } from 'lucide-react'
 
 import type { ChatMessage } from './types'
@@ -22,6 +23,7 @@ type MessageBubbleProps = {
   onSelect: (message: ChatMessage) => void
 
   onReply: (message: ChatMessage) => void
+  onForward: (message: ChatMessage) => void
   onEdit: (message: ChatMessage) => void
   onDeleteForMe: (message: ChatMessage) => void
   onDeleteForEveryone: (message: ChatMessage) => void
@@ -38,6 +40,7 @@ function MessageBubble({
   isSelected,
   onSelect,
   onReply,
+  onForward,
   onEdit,
   onDeleteForMe,
   onDeleteForEveryone,
@@ -145,6 +148,7 @@ function MessageBubble({
                 >
                   <Reply size={16} />
                 </button>
+
                 <button
                   type="button"
                   title={message.pinned ? 'Unpin message' : 'Pin message'}
@@ -167,7 +171,7 @@ function MessageBubble({
                   </button>
                 )}
 
-                {/* Open emoji picker */}
+                {/* Emoji picker */}
                 <div className="relative">
                   <button
                     type="button"
@@ -199,6 +203,16 @@ function MessageBubble({
                     </div>
                   )}
                 </div>
+
+                {/* Forward message */}
+                <button
+                  type="button"
+                  title="Forward"
+                  onClick={() => onForward(message)}
+                  className={actionButtonClass}
+                >
+                  <Forward size={16} />
+                </button>
               </>
             )}
 
@@ -239,6 +253,7 @@ function MessageBubble({
               )}
             </div>
 
+            {/* Close selection */}
             <button
               type="button"
               title="Close selection"
@@ -310,6 +325,19 @@ function MessageBubble({
                 </button>
               )}
 
+              {/* Forwarded label */}
+              {message.forwarded && (
+                <div
+                  className={`mb-1 flex items-center gap-1 text-[11px] italic ${
+                    isMine ? 'text-violet-100' : 'text-secondary'
+                  }`}
+                >
+                  <Forward size={12} />
+                  <span>Forwarded</span>
+                </div>
+              )}
+
+              {/* Message text */}
               <p className="whitespace-pre-wrap break-words text-[13px] leading-5">
                 {message.text}
               </p>
@@ -338,6 +366,7 @@ function MessageBubble({
             )}
 
             <span>{message.time}</span>
+
             {!isDeleted && isMine && (
               <>
                 {message.status === 'sent' && <Check size={12} />}

@@ -28,4 +28,7 @@ export type ChatMessage = {
 
   // Indicates whether the message is pinned.
   pinned?: boolean
+
+  // Indicates whether the message is forwarded from another chat.
+  forwarded?: boolean
 }

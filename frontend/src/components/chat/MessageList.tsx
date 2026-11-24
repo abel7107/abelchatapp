@@ -15,6 +15,7 @@ type MessageListProps = {
   onSelectMessage: (message: ChatMessage) => void
 
   onReply: (message: ChatMessage) => void
+  onForward: (message: ChatMessage) => void
   onEdit: (message: ChatMessage) => void
   onDeleteForMe: (message: ChatMessage) => void
   onDeleteForEveryone: (message: ChatMessage) => void
@@ -34,6 +35,7 @@ function MessageList({
   selectedMessageId,
   onSelectMessage,
   onReply,
+  onForward,
   onEdit,
   onDeleteForMe,
   onDeleteForEveryone,
@@ -220,6 +222,7 @@ const latestPinnedMessage =
               isSelected={selectedMessageId === message.id}
               onSelect={onSelectMessage}
               onReply={onReply}
+              onForward={onForward}
               onEdit={onEdit}
               onDeleteForMe={onDeleteForMe}
               onDeleteForEveryone={onDeleteForEveryone}
