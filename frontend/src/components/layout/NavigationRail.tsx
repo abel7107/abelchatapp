@@ -5,9 +5,16 @@ import {
   CircleDot,
   Users,
   Settings,
+  Star,
 } from 'lucide-react'
 
-type NavigationPage = 'chats' | 'calls' | 'status' | 'contacts' | 'settings'
+type NavigationPage =
+  | 'chats'
+  | 'calls'
+  | 'status'
+  | 'contacts'
+  | 'starred'
+  | 'settings'
 
 type NavigationRailProps = {
   activePage: NavigationPage
@@ -38,6 +45,11 @@ function NavigationRail({
       id: 'contacts' as const,
       label: 'Contacts',
       icon: Users,
+    },
+    {
+      id: 'starred' as const,
+      label: 'Starred',
+      icon: Star,
     },
   ]
 

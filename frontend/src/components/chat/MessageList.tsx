@@ -22,6 +22,7 @@ type MessageListProps = {
 
   onToggleReaction: (message: ChatMessage, emoji: string) => void
   onTogglePin: (message: ChatMessage) => void
+  onToggleStar: (message: ChatMessage) => void
 
   isTyping: boolean
 
@@ -45,6 +46,7 @@ function MessageList({
   onDeleteForEveryone,
   onToggleReaction,
   onTogglePin,
+  onToggleStar,
   isTyping,
   searchQuery = '',
   searchTargetMessageId = null,
@@ -159,10 +161,10 @@ function MessageList({
                 className={`text-secondary shrink-0 transition-transform ${
                   isPinnedPanelOpen ? 'rotate-180' : ''
                 }`}
-               onClick={(event: React.MouseEvent<SVGSVGElement>) => {
-  event.stopPropagation()
-  setIsPinnedPanelOpen((current) => !current)
-}}
+                onClick={(event: React.MouseEvent<SVGSVGElement>) => {
+                  event.stopPropagation()
+                  setIsPinnedPanelOpen((current) => !current)
+                }}
               />
             </button>
 
@@ -243,6 +245,7 @@ function MessageList({
               onToggleReaction={onToggleReaction}
               onJumpToMessage={handleJumpToMessage}
               onTogglePin={onTogglePin}
+              onToggleStar={onToggleStar}
               highlightText={searchQuery}
             />
           )

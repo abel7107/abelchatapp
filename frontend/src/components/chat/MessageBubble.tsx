@@ -11,6 +11,7 @@ import {
   Smile,
   Pin,
   Forward,
+  Star,
 } from 'lucide-react'
 
 import type { ChatMessage } from './types'
@@ -30,6 +31,7 @@ type MessageBubbleProps = {
   onJumpToMessage: (messageId: string) => void
   onToggleReaction: (message: ChatMessage, emoji: string) => void
   onTogglePin: (message: ChatMessage) => void
+  onToggleStar: (message: ChatMessage) => void
 
   // Text to highlight when searching messages.
   highlightText?: string
@@ -91,6 +93,7 @@ function MessageBubble({
   onJumpToMessage,
   onToggleReaction,
   onTogglePin,
+  onToggleStar,
   highlightText = '',
 }: MessageBubbleProps) {
   const isMine = message.sender === 'me'
@@ -159,6 +162,10 @@ function MessageBubble({
     setShowEmojiPicker(false)
   }
 
+  const handleToggleStar = () => {
+    onToggleStar(message)
+  }
+
   return (
     <div
       id={`message-${message.id}`}
@@ -203,6 +210,21 @@ function MessageBubble({
                   }`}
                 >
                   <Pin size={15} />
+                </button>
+
+                {/* Star / Unstar message */}
+                <button
+                  type="button"
+                  title={message.starred ? 'Unstar message' : 'Star message'}
+                  onClick={handleToggleStar}
+                  className={`${actionButtonClass} ${
+                    message.starred ? 'bg-soft-violet text-accent' : ''
+                  }`}
+                >
+                  <Star
+                    size={15}
+                    fill={message.starred ? 'currentColor' : 'none'}
+                  />
                 </button>
 
                 {isMine && (
@@ -411,6 +433,16 @@ function MessageBubble({
                 className="shrink-0"
                 aria-label="Pinned message"
                 title="Pinned message"
+              />
+            )}
+
+            {!isDeleted && message.starred && (
+              <Star
+                size={11}
+                fill="currentColor"
+                className="shrink-0"
+                aria-label="Starred message"
+                title="Starred message"
               />
             )}
 

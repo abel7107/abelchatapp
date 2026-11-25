@@ -31,4 +31,7 @@ export type ChatMessage = {
 
   // Indicates whether the message is forwarded from another chat.
   forwarded?: boolean
+
+    // Indicates whether the message has been starred by the current user.
+  starred?: boolean
 }

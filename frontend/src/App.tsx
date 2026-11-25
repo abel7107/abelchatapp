@@ -7,6 +7,7 @@ import ConversationSidebar from './components/layout/ConversationSidebar'
 import ChatHeader from './components/chat/ChatHeader'
 import MessageList from './components/chat/MessageList'
 import MessageComposer from './components/chat/MessageComposer'
+import StarredMessagesPage from './components/chat/StarredMessagesPage'
 
 import { sampleMessages } from './components/chat/sampleMessages'
 import type { ChatMessage } from './components/chat/types'
@@ -59,6 +60,7 @@ type NavigationPage =
   | 'calls'
   | 'status'
   | 'contacts'
+  | 'starred'
   | 'settings'
 
 function App() {
@@ -126,6 +128,30 @@ function App() {
   const selectedMessages = selectedChatId
     ? messagesByChat[selectedChatId] ?? []
     : []
+
+  // Collect all starred messages from every conversation.
+  const starredMessages = Object.entries(messagesByChat).flatMap(
+    ([chatId, messages]) =>
+      messages
+        .filter(
+          (message) =>
+            message.starred &&
+            !message.deletedForEveryone,
+        )
+        .map((message) => ({
+          chatId,
+          chatName:
+            chatDetails[chatId]?.name ?? 'Unknown conversation',
+          chatInitials:
+            chatDetails[chatId]?.initials ?? '?',
+          message: {
+            id: message.id,
+            text: message.text,
+            time: message.time,
+            sender: message.sender,
+          },
+        })),
+  )
 
   // Find messages matching the current search query.
   const searchResults = searchQuery.trim()
@@ -583,6 +609,54 @@ function App() {
     }))
   }
 
+  // Stars or unstars a message in the current conversation.
+  function handleToggleStar(message: ChatMessage) {
+    if (!selectedChatId || message.deletedForEveryone) return
+
+    setMessagesByChat((currentMessages) => ({
+      ...currentMessages,
+      [selectedChatId]: (
+        currentMessages[selectedChatId] ?? []
+      ).map((currentMessage) =>
+        currentMessage.id === message.id
+          ? {
+              ...currentMessage,
+              starred: !currentMessage.starred,
+            }
+          : currentMessage,
+      ),
+    }))
+
+    // Close the message selection after starring or unstarring.
+    setSelectedMessageId(null)
+  }
+
+  // Removes a star from a message on the Starred Messages page.
+  function handleUnstarMessage(chatId: string, messageId: string) {
+    setMessagesByChat((currentMessages) => ({
+      ...currentMessages,
+      [chatId]: (currentMessages[chatId] ?? []).map((message) =>
+        message.id === messageId
+          ? { ...message, starred: false }
+          : message,
+      ),
+    }))
+  }
+
+  // Opens the original conversation and jumps to the starred message.
+  function handleOpenStarredMessage(
+    chatId: string,
+    messageId: string,
+  ) {
+    setActivePage('chats')
+
+    // Select the conversation and reset its previous search state.
+    handleSelectChat(chatId)
+
+    // Set the target after handleSelectChat clears the previous target.
+    setSearchTargetMessageId(messageId)
+  }
+
   // Sends a new message.
   function handleSendMessage(text: string) {
     if (!selectedChatId) return
@@ -816,6 +890,7 @@ function App() {
                   onDeleteForEveryone={handleDeleteForEveryone}
                   onToggleReaction={handleToggleReaction}
                   onTogglePin={handleTogglePin}
+                  onToggleStar={handleToggleStar}
                   isTyping={isTypingPreview}
                   searchQuery={searchQuery}
                   searchTargetMessageId={searchTargetMessageId}
@@ -866,14 +941,25 @@ function App() {
         <ContactsPage onMessageContact={handleMessageContact} />
       )}
 
-      {/* Pages we haven't implemented yet */}
-      {activePage !== 'chats' && activePage !== 'contacts' && (
-        <main className="flex-1 flex items-center justify-center">
-          <p className="text-secondary">
-            This page is coming soon.
-          </p>
-        </main>
+      {/* Starred messages page */}
+      {activePage === 'starred' && (
+        <StarredMessagesPage
+          messages={starredMessages}
+          onOpenMessage={handleOpenStarredMessage}
+          onUnstarMessage={handleUnstarMessage}
+        />
       )}
+
+      {/* Pages we haven't implemented yet */}
+      {activePage !== 'chats' &&
+        activePage !== 'contacts' &&
+        activePage !== 'starred' && (
+          <main className="flex-1 flex items-center justify-center">
+            <p className="text-secondary">
+              This page is coming soon.
+            </p>
+          </main>
+        )}
 
       {/* Forward message dialog */}
       {messageToForward && (
