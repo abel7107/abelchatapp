@@ -1,6 +1,6 @@
 
 import { useLayoutEffect, useRef, useState } from 'react'
-import { Pin,PinOff ,ChevronDown } from 'lucide-react'
+import { Pin, PinOff, ChevronDown } from 'lucide-react'
 import MessageBubble from './MessageBubble'
 import TypingIndicator from './TypingIndicator'
 import type { ChatMessage } from './types'
@@ -21,10 +21,14 @@ type MessageListProps = {
   onDeleteForEveryone: (message: ChatMessage) => void
 
   onToggleReaction: (message: ChatMessage, emoji: string) => void
-
   onTogglePin: (message: ChatMessage) => void
 
   isTyping: boolean
+
+  // Message search support
+  searchQuery?: string
+  searchTargetMessageId?: string | null
+  onSearchTargetHandled?: () => void
 }
 
 function MessageList({
@@ -42,18 +46,22 @@ function MessageList({
   onToggleReaction,
   onTogglePin,
   isTyping,
+  searchQuery = '',
+  searchTargetMessageId = null,
+  onSearchTargetHandled,
 }: MessageListProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const isFirstRender = useRef(true)
 
   const [isPinnedPanelOpen, setIsPinnedPanelOpen] = useState(false)
-  // Find the most recently pinned message in this conversation.
-const pinnedMessages = messages.filter(
-  (message) => message.pinned && !message.deletedForEveryone,
-)
 
-const latestPinnedMessage =
-  pinnedMessages[pinnedMessages.length - 1]
+  // Find pinned messages in this conversation.
+  const pinnedMessages = messages.filter(
+    (message) => message.pinned && !message.deletedForEveryone,
+  )
+
+  const latestPinnedMessage =
+    pinnedMessages[pinnedMessages.length - 1]
 
   // Restore the saved position when opening a conversation.
   useLayoutEffect(() => {
@@ -83,6 +91,7 @@ const latestPinnedMessage =
     })
   }, [messages, isTyping])
 
+  // Jump to a message inside this conversation.
   function handleJumpToMessage(messageId: string) {
     const container = containerRef.current
     if (!container) return
@@ -97,6 +106,18 @@ const latestPinnedMessage =
     })
   }
 
+  // Jump to a message selected from the search results.
+  useLayoutEffect(() => {
+    if (!searchTargetMessageId) return
+
+    const frameId = requestAnimationFrame(() => {
+      handleJumpToMessage(searchTargetMessageId)
+      onSearchTargetHandled?.()
+    })
+
+    return () => cancelAnimationFrame(frameId)
+  }, [searchTargetMessageId])
+
   return (
     <div
       ref={containerRef}
@@ -106,107 +127,100 @@ const latestPinnedMessage =
       className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-8 py-6"
     >
       <div className="max-w-4xl mx-auto flex flex-col gap-4">
-       
-{latestPinnedMessage && (
-  <div className="overflow-hidden rounded-xl border border-border bg-white shadow-sm">
-    {/* Pinned message banner */}
-    <div className="flex items-center gap-3 px-4 py-3">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-soft-violet text-accent">
-        <Pin size={17} />
-      </div>
 
-      <button
-        type="button"
-        onClick={() => handleJumpToMessage(latestPinnedMessage.id)}
-        className="min-w-0 flex-1 text-left"
-        title="Jump to latest pinned message"
-      >
-        <p className="text-xs font-semibold text-accent">
-          Pinned message · {pinnedMessages.length}
-        </p>
-
-        <p className="mt-0.5 truncate text-sm text-primary">
-          {latestPinnedMessage.text}
-        </p>
-      </button>
-
-      <button
-        type="button"
-        onClick={() =>
-          setIsPinnedPanelOpen((previous) => !previous)
-        }
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-secondary transition hover:bg-surface hover:text-accent"
-        title={isPinnedPanelOpen ? 'Close pinned messages' : 'View all pinned messages'}
-        aria-expanded={isPinnedPanelOpen}
-      >
-        <ChevronDown
-          size={19}
-          className={`transition-transform ${
-            isPinnedPanelOpen ? 'rotate-180' : ''
-          }`}
-        />
-      </button>
-    </div>
-
-    {/* All pinned messages */}
-    {isPinnedPanelOpen && (
-      <div className="border-t border-border">
-        <div className="px-4 py-2 text-xs font-semibold text-secondary">
-          PINNED MESSAGES
-        </div>
-
-        <div className="max-h-64 overflow-y-auto">
-          {pinnedMessages.map((message) => (
-           <div
-            key={message.id}
-            className="flex items-start gap-2 border-t border-border px-4 py-3 transition hover:bg-surface"
-          >
+        {/* Pinned messages banner */}
+        {latestPinnedMessage && (
+          <div className="sticky top-0 z-20">
             <button
               type="button"
-              onClick={() => handleJumpToMessage(message.id)}
-              className="flex min-w-0 flex-1 items-start gap-3 text-left"
-              title="Jump to message"
+              onClick={() => {
+                handleJumpToMessage(latestPinnedMessage.id)
+              }}
+              className="w-full flex items-center justify-between gap-3 rounded-xl border border-border bg-white px-4 py-3 shadow-sm hover:bg-surface transition"
             >
-              <Pin
-                size={15}
-                className="mt-0.5 shrink-0 text-accent"
-              />
+              <div className="flex items-center gap-3 min-w-0">
+                <Pin size={17} className="text-accent shrink-0" />
 
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-secondary">
-                  {message.sender === 'me' ? 'You' : 'Other user'}
-                  <span className="ml-2">{message.time}</span>
-                </p>
+                <div className="min-w-0 text-left">
+                  <p className="text-xs font-semibold text-accent">
+                    Pinned message
+                  </p>
 
-                <p className="mt-1 break-words text-sm text-primary">
-                  {message.text}
-                </p>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => onTogglePin(message)}
-              title="Unpin message"
-              aria-label="Unpin message"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-secondary transition hover:bg-white hover:text-danger"
-            >
-              <PinOff size={15} />
-            </button>
-          </div>
-                    ))}
-                  </div>
+                  <p className="text-sm text-primary truncate">
+                    {latestPinnedMessage.deletedForEveryone
+                      ? 'This message was deleted'
+                      : latestPinnedMessage.text}
+                  </p>
                 </div>
-              )}
-            </div>
-          )}
-       
-        <div className="flex justify-center mb-2">
-          <span className="bg-white border border-border rounded-full px-4 py-1.5 text-xs text-secondary">
-            Today
-          </span>
-        </div>
+              </div>
 
+              <ChevronDown
+                size={18}
+                className={`text-secondary shrink-0 transition-transform ${
+                  isPinnedPanelOpen ? 'rotate-180' : ''
+                }`}
+               onClick={(event: React.MouseEvent<SVGSVGElement>) => {
+  event.stopPropagation()
+  setIsPinnedPanelOpen((current) => !current)
+}}
+              />
+            </button>
+
+            {/* Expanded pinned messages panel */}
+            {isPinnedPanelOpen && (
+              <div className="mt-2 rounded-xl border border-border bg-white p-3 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-primary">
+                    Pinned messages ({pinnedMessages.length})
+                  </h3>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsPinnedPanelOpen(false)}
+                    className="text-xs text-secondary hover:text-accent"
+                  >
+                    Close
+                  </button>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  {pinnedMessages.map((message) => (
+                    <div
+                      key={message.id}
+                      className="flex items-center gap-2"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleJumpToMessage(message.id)
+                          setIsPinnedPanelOpen(false)
+                        }}
+                        className="flex-1 min-w-0 text-left rounded-lg px-3 py-2 hover:bg-surface transition"
+                      >
+                        <p className="text-sm text-primary truncate">
+                          {message.deletedForEveryone
+                            ? 'This message was deleted'
+                            : message.text}
+                        </p>
+                      </button>
+
+                      <button
+                        type="button"
+                        title="Unpin message"
+                        onClick={() => onTogglePin(message)}
+                        className="w-9 h-9 rounded-lg flex items-center justify-center text-secondary hover:bg-surface hover:text-accent transition"
+                      >
+                        <PinOff size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Conversation messages */}
         {messages.map((message) => {
           const replyToMessage = message.replyTo
             ? messages.find(
@@ -229,6 +243,7 @@ const latestPinnedMessage =
               onToggleReaction={onToggleReaction}
               onJumpToMessage={handleJumpToMessage}
               onTogglePin={onTogglePin}
+              highlightText={searchQuery}
             />
           )
         })}

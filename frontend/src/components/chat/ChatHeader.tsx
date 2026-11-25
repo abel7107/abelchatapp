@@ -12,6 +12,7 @@ type ChatHeaderProps = {
   isOnline: boolean
   isGroup?: boolean
   isTyping?: boolean
+  onSearchClick?: () => void
 }
 
 function ChatHeader({
@@ -20,6 +21,7 @@ function ChatHeader({
   isOnline,
   isGroup = false,
   isTyping = false,
+  onSearchClick,
 }: ChatHeaderProps) {
   return (
     <header className="h-[76px] bg-white border-b border-border px-6 flex items-center justify-between shrink-0">
@@ -33,9 +35,11 @@ function ChatHeader({
             {name}
           </h2>
 
-          <p className={`text-xs mt-1 ${
-            isTyping ? 'text-accent font-medium' : 'text-secondary'
-          }`}>
+          <p
+            className={`text-xs mt-1 ${
+              isTyping ? 'text-accent font-medium' : 'text-secondary'
+            }`}
+          >
             {isTyping
               ? 'Typing...'
               : isGroup
@@ -51,6 +55,7 @@ function ChatHeader({
         <button
           type="button"
           title="Search messages"
+          onClick={onSearchClick}
           className="w-10 h-10 rounded-xl flex items-center justify-center text-secondary hover:bg-surface hover:text-accent transition"
         >
           <Search size={19} />

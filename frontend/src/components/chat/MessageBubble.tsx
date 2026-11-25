@@ -30,9 +30,53 @@ type MessageBubbleProps = {
   onJumpToMessage: (messageId: string) => void
   onToggleReaction: (message: ChatMessage, emoji: string) => void
   onTogglePin: (message: ChatMessage) => void
+
+  // Text to highlight when searching messages.
+  highlightText?: string
 }
 
 const availableEmojis = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '🎉']
+
+// Safely highlight matching text without using dangerouslySetInnerHTML.
+function renderHighlightedText(
+  text: string,
+  query: string,
+  isMine: boolean,
+) {
+  const trimmedQuery = query.trim()
+
+  if (!trimmedQuery) {
+    return text
+  }
+
+  const escapedQuery = trimmedQuery.replace(
+    /[.*+?^${}()|[\]\\]/g,
+    '\\$&',
+  )
+
+  const parts = text.split(new RegExp(`(${escapedQuery})`, 'gi'))
+
+  return parts.map((part, index) => {
+    const isMatch = part.toLowerCase() === trimmedQuery.toLowerCase()
+
+    if (!isMatch) {
+      return part
+    }
+
+    return (
+      <mark
+        key={index}
+        className={`rounded px-0.5 ${
+          isMine
+            ? 'bg-yellow-200 text-primary'
+            : 'bg-yellow-200 text-primary'
+        }`}
+      >
+        {part}
+      </mark>
+    )
+  })
+}
 
 function MessageBubble({
   message,
@@ -47,6 +91,7 @@ function MessageBubble({
   onJumpToMessage,
   onToggleReaction,
   onTogglePin,
+  highlightText = '',
 }: MessageBubbleProps) {
   const isMine = message.sender === 'me'
   const isDeleted = message.deletedForEveryone === true
@@ -337,9 +382,13 @@ function MessageBubble({
                 </div>
               )}
 
-              {/* Message text */}
+              {/* Message text with search highlighting */}
               <p className="whitespace-pre-wrap break-words text-[13px] leading-5">
-                {message.text}
+                {renderHighlightedText(
+                  message.text,
+                  highlightText,
+                  isMine,
+                )}
               </p>
             </>
           )}

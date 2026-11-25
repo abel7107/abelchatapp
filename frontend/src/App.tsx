@@ -12,6 +12,7 @@ import { sampleMessages } from './components/chat/sampleMessages'
 import type { ChatMessage } from './components/chat/types'
 import ContactsPage from './components/contacts/ContactsPage'
 import type { Contact } from './components/contacts/types'
+import ForwardMessageDialog from './components/chat/ForwardMessageDialog'
 
 type ChatDetails = {
   name: string
@@ -72,6 +73,10 @@ function App() {
   // Stores the temporary text inside the edit composer.
   const [editingText, setEditingText] = useState('')
 
+  // Stores the message currently selected for forwarding.
+  const [messageToForward, setMessageToForward] =
+    useState<ChatMessage | null>(null)
+
   // Stores the ID of the currently selected message.
   const [selectedMessageId, setSelectedMessageId] =
     useState<string | null>(null)
@@ -94,6 +99,12 @@ function App() {
   const [activePage, setActivePage] =
     useState<NavigationPage>('chats')
 
+  // Message search state.
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchTargetMessageId, setSearchTargetMessageId] =
+    useState<string | null>(null)
+
   // Stores unread message counts.
   const [unreadCounts, setUnreadCounts] = useState<
     Record<string, number>
@@ -114,6 +125,17 @@ function App() {
 
   const selectedMessages = selectedChatId
     ? messagesByChat[selectedChatId] ?? []
+    : []
+
+  // Find messages matching the current search query.
+  const searchResults = searchQuery.trim()
+    ? selectedMessages.filter(
+        (message) =>
+          !message.deletedForEveryone &&
+          message.text
+            .toLowerCase()
+            .includes(searchQuery.trim().toLowerCase()),
+      )
     : []
 
   const [isTypingPreview, setIsTypingPreview] = useState(false)
@@ -175,6 +197,11 @@ function App() {
   function handleSelectChat(chatId: string) {
     setSelectedChatId(chatId)
     setSelectedMessageId(null)
+
+    // Clear search state when switching conversations.
+    setIsSearchOpen(false)
+    setSearchQuery('')
+    setSearchTargetMessageId(null)
 
     // Clear any reply or edit from the previous conversation.
     setReplyingTo(null)
@@ -396,6 +423,80 @@ function App() {
     setReplyingTo(message)
   }
 
+  // Opens the forwarding workflow for a selected message.
+  function handleForwardMessage(message: ChatMessage) {
+    if (message.deletedForEveryone) return
+
+    setSelectedMessageId(null)
+    setReplyingTo(null)
+    setEditingMessage(null)
+    setEditingText('')
+
+    setMessageToForward(message)
+  }
+
+  // Sends a copy of the selected message to each chosen conversation.
+  function handleConfirmForward(conversationIds: string[]) {
+    if (!messageToForward) return
+
+    const now = Date.now()
+
+    // Create a separate forwarded message for each destination.
+    const forwardedMessages = conversationIds.map((chatId) => ({
+      chatId,
+      message: {
+        id: crypto.randomUUID(),
+        text: messageToForward.text,
+        time: new Date(now).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        sender: 'me' as const,
+        status: 'sent' as const,
+        forwarded: true,
+      },
+    }))
+
+    // Add each forwarded message to its destination conversation.
+    setMessagesByChat((currentMessages) => {
+      const updatedMessages = { ...currentMessages }
+
+      forwardedMessages.forEach(({ chatId, message }) => {
+        updatedMessages[chatId] = [
+          ...(updatedMessages[chatId] ?? []),
+          message,
+        ]
+      })
+
+      return updatedMessages
+    })
+
+    // Update activity for every destination conversation.
+    setLastActivityByChat((currentActivity) => {
+      const updatedActivity = { ...currentActivity }
+
+      conversationIds.forEach((chatId) => {
+        updatedActivity[chatId] = now
+      })
+
+      return updatedActivity
+    })
+
+    // Increase unread counts for destination conversations.
+    setUnreadCounts((currentCounts) => {
+      const updatedCounts = { ...currentCounts }
+
+      conversationIds.forEach((chatId) => {
+        updatedCounts[chatId] = (updatedCounts[chatId] ?? 0) + 1
+      })
+
+      return updatedCounts
+    })
+
+    // Close the forwarding dialog.
+    setMessageToForward(null)
+  }
+
   // Adds, changes, or removes the current user's reaction.
   function handleToggleReaction(message: ChatMessage, emoji: string) {
     if (!selectedChatId) return
@@ -463,24 +564,25 @@ function App() {
     }))
   }
 
-      // Pins or unpins a message in the current conversation.
-    function handleTogglePin(message: ChatMessage) {
-      if (!selectedChatId) return
+  // Pins or unpins a message in the current conversation.
+  function handleTogglePin(message: ChatMessage) {
+    if (!selectedChatId) return
 
-      setMessagesByChat((currentMessages) => ({
-        ...currentMessages,
-        [selectedChatId]: (
-          currentMessages[selectedChatId] ?? []
-        ).map((currentMessage) =>
-          currentMessage.id === message.id
-            ? {
-                ...currentMessage,
-                pinned: !currentMessage.pinned,
-              }
-            : currentMessage,
-        ),
-      }))
-    }
+    setMessagesByChat((currentMessages) => ({
+      ...currentMessages,
+      [selectedChatId]: (
+        currentMessages[selectedChatId] ?? []
+      ).map((currentMessage) =>
+        currentMessage.id === message.id
+          ? {
+              ...currentMessage,
+              pinned: !currentMessage.pinned,
+            }
+          : currentMessage,
+      ),
+    }))
+  }
+
   // Sends a new message.
   function handleSendMessage(text: string) {
     if (!selectedChatId) return
@@ -618,7 +720,83 @@ function App() {
                   isOnline={selectedChat.isOnline}
                   isGroup={selectedChat.isGroup}
                   isTyping={isTypingPreview}
+                  onSearchClick={() =>
+                    setIsSearchOpen((current) => !current)
+                  }
                 />
+
+                {/* Message search panel */}
+                {isSearchOpen && (
+                  <div className="border-b border-border bg-white px-4 py-3 sm:px-8">
+                    <div className="mx-auto max-w-4xl">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={searchQuery}
+                          onChange={(event) =>
+                            setSearchQuery(event.target.value)
+                          }
+                          placeholder="Search messages in this conversation..."
+                          autoFocus
+                          className="h-10 min-w-0 flex-1 rounded-xl border border-border bg-surface px-3 text-sm text-primary outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/10"
+                        />
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsSearchOpen(false)
+                            setSearchQuery('')
+                            setSearchTargetMessageId(null)
+                          }}
+                          className="rounded-lg px-3 py-2 text-sm text-secondary transition hover:bg-surface hover:text-accent"
+                        >
+                          Close
+                        </button>
+                      </div>
+
+                      {searchQuery.trim() && (
+                        <div className="mt-3">
+                          <p className="mb-2 text-xs text-secondary">
+                            {searchResults.length === 1
+                              ? '1 message found'
+                              : `${searchResults.length} messages found`}
+                          </p>
+
+                          {searchResults.length > 0 ? (
+                            <div className="max-h-48 overflow-y-auto">
+                              {searchResults.map((message) => (
+                                <button
+                                  key={message.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setSearchTargetMessageId(message.id)
+                                  }}
+                                  className="mb-1 w-full rounded-lg px-3 py-2 text-left transition hover:bg-surface"
+                                >
+                                  <span className="mb-1 block text-[10px] text-secondary">
+                                    {message.sender === 'me'
+                                      ? 'You'
+                                      : selectedChat.name}
+                                    {' · '}
+                                    {message.time}
+                                  </span>
+
+                                  <span className="block truncate text-sm text-primary">
+                                    {message.text}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="py-3 text-center text-sm text-secondary">
+                              No matching messages found.
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 <MessageList
                   messages={selectedMessages}
@@ -632,12 +810,18 @@ function App() {
                   selectedMessageId={selectedMessageId}
                   onSelectMessage={handleSelectMessage}
                   onReply={handleReplyMessage}
+                  onForward={handleForwardMessage}
                   onEdit={handleEditMessage}
                   onDeleteForMe={handleDeleteForMe}
                   onDeleteForEveryone={handleDeleteForEveryone}
                   onToggleReaction={handleToggleReaction}
                   onTogglePin={handleTogglePin}
                   isTyping={isTypingPreview}
+                  searchQuery={searchQuery}
+                  searchTargetMessageId={searchTargetMessageId}
+                  onSearchTargetHandled={() =>
+                    setSearchTargetMessageId(null)
+                  }
                 />
 
                 <MessageComposer
@@ -689,6 +873,22 @@ function App() {
             This page is coming soon.
           </p>
         </main>
+      )}
+
+      {/* Forward message dialog */}
+      {messageToForward && (
+        <ForwardMessageDialog
+          message={messageToForward}
+          conversations={Object.entries(chatDetails)
+            .filter(([chatId]) => chatId !== selectedChatId)
+            .map(([id, chat]) => ({
+              id,
+              name: chat.name,
+              initials: chat.initials,
+            }))}
+          onClose={() => setMessageToForward(null)}
+          onForward={handleConfirmForward}
+        />
       )}
     </div>
   )
