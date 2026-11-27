@@ -1,5 +1,5 @@
 
-import { MessageCircle, Star, X } from 'lucide-react'
+import { MessageCircle, Star } from 'lucide-react'
 
 export type StarredMessageItem = {
   chatId: string

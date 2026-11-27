@@ -19,8 +19,10 @@ function ContactsPage({ onMessageContact }: ContactsPageProps) {
   const [contacts, setContacts] = useState<Contact[]>(sampleContacts)
   const [searchQuery, setSearchQuery] = useState('')
   const [isAddFormOpen, setIsAddFormOpen] = useState(false)
+
   const [name, setName] = useState('')
   const [username, setUsername] = useState('')
+  const [phone, setPhone] = useState('')
   const [error, setError] = useState('')
 
   const filteredContacts = contacts.filter((contact) => {
@@ -28,7 +30,8 @@ function ContactsPage({ onMessageContact }: ContactsPageProps) {
 
     return (
       contact.name.toLowerCase().includes(query) ||
-      contact.username.toLowerCase().includes(query)
+      contact.username.toLowerCase().includes(query) ||
+      contact.phone.includes(query)
     )
   })
 
@@ -37,15 +40,23 @@ function ContactsPage({ onMessageContact }: ContactsPageProps) {
 
     const trimmedName = name.trim()
     const trimmedUsername = username.trim().toLowerCase()
+    const trimmedPhone = phone.trim()
 
-    if (!trimmedName || !trimmedUsername) {
-      setError('Please fill in both fields.')
+    if (!trimmedName || !trimmedUsername || !trimmedPhone) {
+      setError('Please fill in all fields.')
       return
     }
 
     const normalizedUsername = trimmedUsername.startsWith('@')
       ? trimmedUsername
       : `@${trimmedUsername}`
+
+    const normalizedPhone = trimmedPhone.replace(/\s+/g, '')
+
+    if (!/^\+?[0-9]{7,15}$/.test(normalizedPhone)) {
+      setError('Please enter a valid phone number.')
+      return
+    }
 
     const alreadyExists = contacts.some(
       (contact) =>
@@ -57,9 +68,20 @@ function ContactsPage({ onMessageContact }: ContactsPageProps) {
       return
     }
 
+    const phoneAlreadyExists = contacts.some(
+      (contact) =>
+        contact.phone.replace(/\s+/g, '') === normalizedPhone,
+    )
+
+    if (phoneAlreadyExists) {
+      setError('This phone number is already in your contacts.')
+      return
+    }
+
     const newContact: Contact = {
       id: crypto.randomUUID(),
       name: trimmedName,
+      phone: normalizedPhone,
       username: normalizedUsername,
       initials: trimmedName
         .split(' ')
@@ -77,6 +99,7 @@ function ContactsPage({ onMessageContact }: ContactsPageProps) {
 
     setName('')
     setUsername('')
+    setPhone('')
     setError('')
     setIsAddFormOpen(false)
   }
@@ -113,7 +136,7 @@ function ContactsPage({ onMessageContact }: ContactsPageProps) {
               type="text"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Search by name or username..."
+              placeholder="Search by name, username or phone..."
               className="w-full rounded-xl border border-border bg-sidebar py-3 pl-11 pr-4 outline-none focus:border-accent"
             />
           </div>
@@ -149,6 +172,9 @@ function ContactsPage({ onMessageContact }: ContactsPageProps) {
                     <p className="text-sm text-secondary">
                       {contact.username}
                     </p>
+                    <p className="text-xs text-secondary mt-1">
+                      {contact.phone}
+                    </p>
                   </div>
 
                   <span className="text-xs text-secondary">
@@ -176,7 +202,7 @@ function ContactsPage({ onMessageContact }: ContactsPageProps) {
                 No contacts found
               </h3>
               <p className="text-sm text-secondary">
-                Try searching with another name or username.
+                Try searching with another name, username or phone.
               </p>
             </div>
           )}
@@ -223,6 +249,19 @@ function ContactsPage({ onMessageContact }: ContactsPageProps) {
                   value={username}
                   onChange={(event) => setUsername(event.target.value)}
                   placeholder="Enter username"
+                  className="w-full rounded-xl border border-border bg-app-bg px-4 py-3 outline-none focus:border-accent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Phone number
+                </label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                  placeholder="+251 911 000 005"
                   className="w-full rounded-xl border border-border bg-app-bg px-4 py-3 outline-none focus:border-accent"
                 />
               </div>

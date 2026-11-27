@@ -101,6 +101,7 @@ function MessageBubble({
 
   const [showDeleteMenu, setShowDeleteMenu] = useState(false)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [expandedContactIds, setExpandedContactIds] = useState<string[]>([])
 
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const longPressTriggered = useRef(false)
@@ -387,7 +388,10 @@ function MessageBubble({
                   >
                     {replyToMessage.deletedForEveryone
                       ? 'This message was deleted'
-                      : replyToMessage.text}
+                      : replyToMessage.text ||
+                        (replyToMessage.sharedContacts?.length
+                          ? 'Contact shared'
+                          : 'Message')}
                   </span>
                 </button>
               )}
@@ -404,14 +408,118 @@ function MessageBubble({
                 </div>
               )}
 
+              {/* Shared contact cards */}
+              {message.sharedContacts && message.sharedContacts.length > 0 && (
+                <div className="mt-2 flex min-w-0 flex-col gap-2">
+                  {message.sharedContacts.map((contact) => {
+                    const isContactExpanded = expandedContactIds.includes(contact.id)
+
+                    const initials = contact.name
+                      .trim()
+                      .split(/\s+/)
+                      .map((part) => part[0])
+                      .join('')
+                      .slice(0, 2)
+                      .toUpperCase()
+
+                    return (
+                      <div
+                        key={contact.id}
+                        className={`w-64 max-w-full overflow-hidden rounded-xl border ${
+                          isMine
+                            ? 'border-white/20 bg-white/10'
+                            : 'border-border bg-surface'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 p-3">
+                          {contact.avatar ? (
+                            <img
+                              src={contact.avatar}
+                              alt=""
+                              className="h-11 w-11 shrink-0 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div
+                              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${
+                                isMine
+                                  ? 'bg-white/20 text-white'
+                                  : 'bg-soft-violet text-accent'
+                              }`}
+                              aria-hidden="true"
+                            >
+                              {initials || '?'}
+                            </div>
+                          )}
+
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold">
+                              {contact.name}
+                            </p>
+
+                            {contact.username && (
+                              <p
+                                className={`truncate text-xs ${
+                                  isMine ? 'text-violet-100' : 'text-secondary'
+                                }`}
+                              >
+                                {contact.username.startsWith('@')
+                                  ? contact.username
+                                  : `@${contact.username}`}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {isContactExpanded && (
+                          <div
+                            className={`border-t px-3 py-2 text-xs ${
+                              isMine
+                                ? 'border-white/20 text-violet-100'
+                                : 'border-border text-secondary'
+                            }`}
+                          >
+                            <p className="break-all">{contact.phone}</p>
+                          </div>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation()
+
+                            setExpandedContactIds((currentIds) =>
+                              currentIds.includes(contact.id)
+                                ? currentIds.filter((id) => id !== contact.id)
+                                : [...currentIds, contact.id],
+                            )
+                          }}
+                          className={`w-full border-t px-3 py-2 text-left text-xs font-semibold transition ${
+                            isMine
+                              ? 'border-white/20 text-white hover:bg-white/10'
+                              : 'border-border text-accent hover:bg-surface-hover'
+                          }`}
+                          aria-expanded={isContactExpanded}
+                        >
+                          {isContactExpanded
+                            ? 'Hide contact details'
+                            : 'View contact'}
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
               {/* Message text with search highlighting */}
-              <p className="whitespace-pre-wrap break-words text-[13px] leading-5">
-                {renderHighlightedText(
-                  message.text,
-                  highlightText,
-                  isMine,
-                )}
-              </p>
+              {message.text.trim() && (
+                <p className="whitespace-pre-wrap break-words text-[13px] leading-5">
+                  {renderHighlightedText(
+                    message.text,
+                    highlightText,
+                    isMine,
+                  )}
+                </p>
+              )}
             </>
           )}
 

@@ -14,7 +14,8 @@ import type { ChatMessage } from './components/chat/types'
 import ContactsPage from './components/contacts/ContactsPage'
 import type { Contact } from './components/contacts/types'
 import ForwardMessageDialog from './components/chat/ForwardMessageDialog'
-
+import ShareContactDialog from './components/chat/ShareContactDialog'
+import { sampleContacts } from './components/contacts/sampleContacts'
 type ChatDetails = {
   name: string
   initials: string
@@ -74,6 +75,9 @@ function App() {
 
   // Stores the temporary text inside the edit composer.
   const [editingText, setEditingText] = useState('')
+
+  //
+  const [isShareContactOpen, setIsShareContactOpen] = useState(false)
 
   // Stores the message currently selected for forwarding.
   const [messageToForward, setMessageToForward] =
@@ -723,6 +727,50 @@ function App() {
     setSelectedMessageId(null)
   }
 
+      // Shares selected contacts in the current conversation.
+          function handleShareContacts(contacts: Contact[]) {
+            if (!selectedChatId) return
+
+            const now = Date.now()
+
+            const sharedMessage: ChatMessage = {
+              id: crypto.randomUUID(),
+              text: '',
+              time: new Date(now).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              }),
+              sender: 'me',
+              status: 'sent',
+              sharedContacts: contacts.map((contact) => ({
+                id: contact.id,
+                name: contact.name,
+                phone: contact.phone,
+                username: contact.username,
+                avatar: contact.avatar,
+              })),
+            }
+
+            setMessagesByChat((currentMessages) => ({
+              ...currentMessages,
+              [selectedChatId]: [
+                ...(currentMessages[selectedChatId] ?? []),
+                sharedMessage,
+              ],
+            }))
+
+            setLastActivityByChat((currentActivity) => ({
+              ...currentActivity,
+              [selectedChatId]: now,
+            }))
+
+            setIsShareContactOpen(false)
+            setSelectedMessageId(null)
+            setReplyingTo(null)
+          }
+
+
+
   // Temporary testing function: simulates a message from another user.
   function handleSimulateIncomingMessage() {
     const targetChatId =
@@ -912,6 +960,7 @@ function App() {
                   editingMessage={editingMessage}
                   onSaveEdit={handleSaveEdit}
                   onCancelEdit={handleCancelEdit}
+                  onShareContact={() => setIsShareContactOpen(true)}
                 />
               </>
             ) : (
@@ -976,6 +1025,14 @@ function App() {
           onForward={handleConfirmForward}
         />
       )}
+          {/* Share contact dialog */}
+            {isShareContactOpen && (
+              <ShareContactDialog
+                contacts={sampleContacts}
+                onClose={() => setIsShareContactOpen(false)}
+                onShare={handleShareContacts}
+              />
+            )}
     </div>
   )
 }

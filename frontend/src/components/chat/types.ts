@@ -7,6 +7,15 @@ export type MessageReaction = {
   userIds: string[]
 }
 
+// Represents contact information shared inside a conversation.
+export type SharedContact = {
+  id: string
+  name: string
+  phone: string
+  username?: string
+  avatar?: string
+}
+
 export type ChatMessage = {
   id: string
   text: string
@@ -32,6 +41,9 @@ export type ChatMessage = {
   // Indicates whether the message is forwarded from another chat.
   forwarded?: boolean
 
-    // Indicates whether the message has been starred by the current user.
+  // Indicates whether the message has been starred by the current user.
   starred?: boolean
+
+  // Contacts shared in this message.
+  sharedContacts?: SharedContact[]
 }

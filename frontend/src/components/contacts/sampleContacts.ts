@@ -5,6 +5,7 @@ export const sampleContacts: Contact[] = [
   {
     id: '1',
     name: 'Abel Tesfaye',
+    phone: '+251911000001',
     username: '@abel',
     initials: 'AT',
     isOnline: true,
@@ -12,6 +13,7 @@ export const sampleContacts: Contact[] = [
   {
     id: '2',
     name: 'Sarah Johnson',
+    phone: '+251911000002',
     username: '@sarah',
     initials: 'SJ',
     isOnline: false,
@@ -19,6 +21,7 @@ export const sampleContacts: Contact[] = [
   {
     id: '3',
     name: 'Daniel Bekele',
+    phone: '+251911000003',
     username: '@daniel',
     initials: 'DB',
     isOnline: true,
@@ -26,6 +29,7 @@ export const sampleContacts: Contact[] = [
   {
     id: '4',
     name: 'Hana Mohammed',
+    phone: '+251911000004',
     username: '@hana',
     initials: 'HM',
     isOnline: false,

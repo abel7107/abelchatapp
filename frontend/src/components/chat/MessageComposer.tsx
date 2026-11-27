@@ -1,5 +1,8 @@
 
 import {
+  useEffect,
+  useRef,
+  useState,
   type FormEvent,
   type KeyboardEvent,
 } from 'react'
@@ -10,6 +13,7 @@ import {
   Send,
   Save,
   X,
+  ContactRound,
 } from 'lucide-react'
 
 import type { ChatMessage } from './types'
@@ -25,6 +29,8 @@ type MessageComposerProps = {
   editingMessage: ChatMessage | null
   onSaveEdit: (messageId: string, text: string) => void
   onCancelEdit: () => void
+
+  onShareContact: () => void
 }
 
 function MessageComposer({
@@ -36,14 +42,46 @@ function MessageComposer({
   editingMessage,
   onSaveEdit,
   onCancelEdit,
+  onShareContact,
 }: MessageComposerProps) {
+  const [isAttachmentMenuOpen, setIsAttachmentMenuOpen] =
+    useState(false)
+
+  const attachmentMenuRef = useRef<HTMLDivElement>(null)
+
+  // Close the attachment menu when clicking outside or pressing Escape.
+  useEffect(() => {
+    if (!isAttachmentMenuOpen) return
+
+    function handlePointerDown(event: PointerEvent) {
+      if (
+        attachmentMenuRef.current &&
+        !attachmentMenuRef.current.contains(event.target as Node)
+      ) {
+        setIsAttachmentMenuOpen(false)
+      }
+    }
+
+    function handleKeyDown(event: globalThis.KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setIsAttachmentMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isAttachmentMenuOpen])
 
   function handleSend() {
     const trimmedMessage = value.trim()
 
     if (!trimmedMessage) return
 
-    // If editing, save the changes instead of sending a new message.
     if (editingMessage) {
       onSaveEdit(editingMessage.id, trimmedMessage)
     } else {
@@ -65,6 +103,11 @@ function MessageComposer({
       event.preventDefault()
       handleSend()
     }
+  }
+
+  function handleShareContact() {
+    setIsAttachmentMenuOpen(false)
+    onShareContact()
   }
 
   return (
@@ -124,14 +167,49 @@ function MessageComposer({
 
         <div className="flex items-end gap-2 bg-surface rounded-2xl border border-border p-2">
 
-          <button
-            type="button"
-            title="Attach file"
-            className="w-10 h-10 shrink-0 rounded-xl flex items-center justify-center text-secondary hover:bg-surface-hover hover:text-accent transition"
-          >
-            <Paperclip size={20} />
-          </button>
+          {/* Attachment menu */}
+          <div className="relative shrink-0" ref={attachmentMenuRef}>
+            <button
+              type="button"
+              title="Attachments"
+              aria-label="Open attachment menu"
+              aria-haspopup="menu"
+              aria-expanded={isAttachmentMenuOpen}
+              onClick={() =>
+                setIsAttachmentMenuOpen((isOpen) => !isOpen)
+              }
+              disabled={!!editingMessage}
+              className="w-10 h-10 rounded-xl flex items-center justify-center text-secondary hover:bg-surface-hover hover:text-accent disabled:opacity-40 disabled:cursor-not-allowed transition"
+            >
+              <Paperclip size={20} />
+            </button>
 
+            {isAttachmentMenuOpen && (
+              <div
+                role="menu"
+                aria-label="Attachment options"
+                className="absolute bottom-full left-0 z-50 mb-3 w-52 rounded-xl border border-border bg-white p-2 shadow-xl"
+              >
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={handleShareContact}
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-sm text-primary transition hover:bg-surface"
+                >
+                  <ContactRound
+                    size={19}
+                    className="text-accent"
+                  />
+
+                  <span className="font-medium">
+                    Share contact
+                  </span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Message input */}
           <textarea
             value={value}
             onChange={(event) => onChange(event.target.value)}
