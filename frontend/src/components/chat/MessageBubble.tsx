@@ -1,5 +1,5 @@
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import {
   Check,
@@ -12,6 +12,8 @@ import {
   Pin,
   Forward,
   Star,
+  Play,
+  Pause,
 } from 'lucide-react'
 
 import type { ChatMessage } from './types'
@@ -33,11 +35,22 @@ type MessageBubbleProps = {
   onTogglePin: (message: ChatMessage) => void
   onToggleStar: (message: ChatMessage) => void
 
-  // Text to highlight when searching messages.
   highlightText?: string
 }
 
 const availableEmojis = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '🎉']
+
+// Format audio duration as minutes and seconds.
+function formatAudioTime(seconds: number) {
+  if (!Number.isFinite(seconds) || seconds < 0) {
+    return '0:00'
+  }
+
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = Math.floor(seconds % 60)
+
+  return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`
+}
 
 // Safely highlight matching text without using dangerouslySetInnerHTML.
 function renderHighlightedText(
@@ -103,11 +116,98 @@ function MessageBubble({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [expandedContactIds, setExpandedContactIds] = useState<string[]>([])
 
+  // Voice message playback state.
+  const audioRef = useRef<HTMLAudioElement>(null)
+
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [currentAudioTime, setCurrentAudioTime] = useState(0)
+  const [audioDuration, setAudioDuration] = useState(
+    message.voiceMessage?.duration ?? 0,
+  )
+
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const longPressTriggered = useRef(false)
 
   const actionButtonClass =
     'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-secondary transition hover:bg-surface-hover hover:text-accent'
+
+  // Synchronize the player with the audio element.
+  useEffect(() => {
+    const audio = audioRef.current
+
+    if (!audio || !message.voiceMessage) return
+
+    const updateCurrentTime = () => {
+      setCurrentAudioTime(audio.currentTime)
+    }
+
+    const updateDuration = () => {
+      if (Number.isFinite(audio.duration)) {
+        setAudioDuration(audio.duration)
+      }
+    }
+
+    const handlePlaybackEnd = () => {
+      setIsPlaying(false)
+      setCurrentAudioTime(0)
+      audio.currentTime = 0
+    }
+
+    const handlePlaybackPause = () => {
+      setIsPlaying(false)
+    }
+
+    const handlePlaybackStart = () => {
+      setIsPlaying(true)
+    }
+
+    audio.addEventListener('timeupdate', updateCurrentTime)
+    audio.addEventListener('loadedmetadata', updateDuration)
+    audio.addEventListener('durationchange', updateDuration)
+    audio.addEventListener('ended', handlePlaybackEnd)
+    audio.addEventListener('pause', handlePlaybackPause)
+    audio.addEventListener('play', handlePlaybackStart)
+
+    // Use the stored duration until browser metadata is available.
+    setAudioDuration(message.voiceMessage.duration)
+
+    return () => {
+      audio.removeEventListener('timeupdate', updateCurrentTime)
+      audio.removeEventListener('loadedmetadata', updateDuration)
+      audio.removeEventListener('durationchange', updateDuration)
+      audio.removeEventListener('ended', handlePlaybackEnd)
+      audio.removeEventListener('pause', handlePlaybackPause)
+      audio.removeEventListener('play', handlePlaybackStart)
+    }
+  }, [message.voiceMessage?.audioUrl, message.voiceMessage?.duration])
+
+  // Play or pause the voice message.
+  async function handleToggleAudio() {
+    const audio = audioRef.current
+
+    if (!audio) return
+
+    try {
+      if (audio.paused) {
+        await audio.play()
+      } else {
+        audio.pause()
+      }
+    } catch (error) {
+      console.error('Unable to play voice message:', error)
+      setIsPlaying(false)
+    }
+  }
+
+  // Seek to a selected position in the recording.
+  function handleAudioSeek(value: number) {
+    const audio = audioRef.current
+
+    if (!audio || !Number.isFinite(value)) return
+
+    audio.currentTime = value
+    setCurrentAudioTime(value)
+  }
 
   const stopLongPress = () => {
     if (longPressTimer.current) {
@@ -389,9 +489,11 @@ function MessageBubble({
                     {replyToMessage.deletedForEveryone
                       ? 'This message was deleted'
                       : replyToMessage.text ||
-                        (replyToMessage.sharedContacts?.length
-                          ? 'Contact shared'
-                          : 'Message')}
+                        (replyToMessage.voiceMessage
+                          ? '🎤 Voice message'
+                          : replyToMessage.sharedContacts?.length
+                            ? 'Contact shared'
+                            : 'Message')}
                   </span>
                 </button>
               )}
@@ -405,6 +507,76 @@ function MessageBubble({
                 >
                   <Forward size={12} />
                   <span>Forwarded</span>
+                </div>
+              )}
+
+              {/* Voice message player */}
+              {message.voiceMessage && (
+                <div
+                  className={`mt-2 flex w-64 max-w-full items-center gap-3 rounded-xl p-3 ${
+                    isMine
+                      ? 'bg-white/10'
+                      : 'border border-border bg-surface'
+                  }`}
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <audio
+                    ref={audioRef}
+                    src={message.voiceMessage.audioUrl}
+                    preload="metadata"
+                    className="hidden"
+                  />
+
+                  {/* Play / Pause */}
+                  <button
+                    type="button"
+                    onClick={handleToggleAudio}
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition ${
+                      isMine
+                        ? 'bg-white text-accent hover:bg-violet-100'
+                        : 'bg-accent text-white hover:bg-accent-hover'
+                    }`}
+                    title={isPlaying ? 'Pause voice message' : 'Play voice message'}
+                    aria-label={isPlaying ? 'Pause voice message' : 'Play voice message'}
+                  >
+                    {isPlaying ? (
+                      <Pause size={18} fill="currentColor" />
+                    ) : (
+                      <Play size={18} fill="currentColor" className="ml-0.5" />
+                    )}
+                  </button>
+
+                  {/* Progress and duration */}
+                  <div className="min-w-0 flex-1">
+                    <input
+                      type="range"
+                      min={0}
+                      max={Math.max(audioDuration, 0.01)}
+                      step={0.1}
+                      value={Math.min(currentAudioTime, audioDuration || 0)}
+                      onChange={(event) =>
+                        handleAudioSeek(Number(event.target.value))
+                      }
+                      className={`h-1.5 w-full cursor-pointer ${
+                        isMine ? 'accent-white' : 'accent-violet-500'
+                      }`}
+                      aria-label="Voice message playback position"
+                    />
+
+                    <div
+                      className={`mt-1 flex justify-between text-[10px] ${
+                        isMine ? 'text-violet-100' : 'text-secondary'
+                      }`}
+                    >
+                      <span>{formatAudioTime(currentAudioTime)}</span>
+                      <span>
+                        {formatAudioTime(
+                          audioDuration || message.voiceMessage.duration,
+                        )}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               )}
 

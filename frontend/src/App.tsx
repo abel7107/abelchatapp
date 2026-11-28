@@ -727,6 +727,79 @@ function App() {
     setSelectedMessageId(null)
   }
 
+                // Sends a recorded voice message.
+          function handleSendVoiceMessage(audioBlob: Blob, duration: number) {
+            if (!selectedChatId) return
+
+            const chatId = selectedChatId
+            const now = Date.now()
+            const messageId = crypto.randomUUID()
+
+            // Create a temporary URL for the recorded audio.
+            const audioUrl = URL.createObjectURL(audioBlob)
+
+            const newMessage: ChatMessage = {
+              id: messageId,
+              text: '',
+              time: new Date(now).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              }),
+              sender: 'me',
+              status: 'sent',
+              replyTo: replyingTo?.id,
+              voiceMessage: {
+                audioUrl,
+                duration,
+              },
+            }
+
+            // Add the voice message to the current conversation.
+            setMessagesByChat((currentMessages) => ({
+              ...currentMessages,
+              [chatId]: [
+                ...(currentMessages[chatId] ?? []),
+                newMessage,
+              ],
+            }))
+
+            // Update the conversation's latest activity.
+            setLastActivityByChat((currentActivity) => ({
+              ...currentActivity,
+              [chatId]: now,
+            }))
+
+            // Simulate delivery after 1 second.
+            setTimeout(() => {
+              setMessagesByChat((currentMessages) => ({
+                ...currentMessages,
+                [chatId]: (currentMessages[chatId] ?? []).map((message) =>
+                  message.id === messageId
+                    ? { ...message, status: 'delivered' }
+                    : message,
+                ),
+              }))
+            }, 1000)
+
+            // Simulate the recipient reading after 5 seconds.
+            setTimeout(() => {
+              setMessagesByChat((currentMessages) => ({
+                ...currentMessages,
+                [chatId]: (currentMessages[chatId] ?? []).map((message) =>
+                  message.id === messageId
+                    ? { ...message, status: 'read' }
+                    : message,
+                ),
+              }))
+            }, 5000)
+
+            // Clear reply and message selection.
+            setReplyingTo(null)
+            setSelectedMessageId(null)
+          }
+
+
+
       // Shares selected contacts in the current conversation.
           function handleShareContacts(contacts: Contact[]) {
             if (!selectedChatId) return
@@ -955,12 +1028,14 @@ function App() {
                   }
                   onChange={handleComposerChange}
                   onSendMessage={handleSendMessage}
+                  onSendVoiceMessage={handleSendVoiceMessage}
                   replyTo={replyingTo}
                   onCancelReply={() => setReplyingTo(null)}
                   editingMessage={editingMessage}
                   onSaveEdit={handleSaveEdit}
                   onCancelEdit={handleCancelEdit}
                   onShareContact={() => setIsShareContactOpen(true)}
+                  
                 />
               </>
             ) : (

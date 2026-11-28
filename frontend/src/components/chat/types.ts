@@ -16,6 +16,11 @@ export type SharedContact = {
   avatar?: string
 }
 
+export type VoiceMessage = {
+  audioUrl: string
+  duration: number
+}
+
 export type ChatMessage = {
   id: string
   text: string
@@ -46,4 +51,7 @@ export type ChatMessage = {
 
   // Contacts shared in this message.
   sharedContacts?: SharedContact[]
+
+  // Voice message data.
+  voiceMessage?: VoiceMessage
 }
